@@ -50,12 +50,14 @@ function SessionContent() {
     setLoading(true);
     setFetchError(null);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log("Current Auth Session:", session ? "Authenticated" : "Anonymous/Guest");
+      
       console.log("Fetching project for ID:", projectId);
       const projData = await getProjectById(projectId);
-      console.log("Project data received:", projData);
+      console.log("Project data received:", projData ? "Found" : "NOT FOUND (Possibly RLS block)");
       
       if (!projData) {
-        // Explicitly handle project not found
         setProject(null);
       } else {
         setProject(projData);
