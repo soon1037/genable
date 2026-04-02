@@ -140,6 +140,27 @@ function SessionContent() {
     );
   }
 
+  if (isIdVerified && !loading && !project) {
+    return (
+      <div className="fixed inset-0 bg-[#f9f9fb] flex flex-col items-center justify-center p-8 z-50 text-center font-sans">
+        <div className="w-20 h-20 rounded-3xl bg-red-50 flex items-center justify-center mb-6">
+           <Info className="w-10 h-10 text-red-500" />
+        </div>
+        <h2 className="text-2xl font-black italic tracking-tighter text-black mb-2">프리미엄 세션 정보를 찾을 수 없습니다</h2>
+        <p className="text-neutral-400 text-[13px] font-medium leading-relaxed max-w-sm mb-10">
+          요청하신 프로젝트 ID가 유효하지 않거나 삭제된 것 같습니다.<br/>
+          올바른 URL인지 다시 한번 확인해 주세요.
+        </p>
+        <button 
+          onClick={() => router.push('/gendesk')}
+          className="bg-black text-white px-8 py-4 rounded-2xl font-bold text-[13px] hover:bg-neutral-800 transition-all"
+        >
+          대시보드로 돌아가기
+        </button>
+      </div>
+    );
+  }
+
   if (!isIdVerified) {
     return (
       <div className="fixed inset-0 bg-[#f9f9fb] flex items-center justify-center p-4 z-50 text-neutral-900 font-sans">
