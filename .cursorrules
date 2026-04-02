@@ -1,0 +1,5 @@
+# Gemini Live API Model Rules
+- Gemini Live API 호출 시 모델 이름은 **무구조건 `models/gemini-3.1-flash-live-preview`만 사용**한다.
+- **Gemini 2.0 계열(2.0-flash-exp 등)은 어떠한 경우에도 언급하거나, 제안하거나, 사용하지 않는다.**
+- 오직 3.1 모델 한 가지만을 사용하여 모든 문제를 해결하며, 2.0으로의 원복이나 테스트 제안은 금지한다.
+- WebSocket URL과 설정값은 3.1 모델의 최신 규격을 철저히 준수한다.

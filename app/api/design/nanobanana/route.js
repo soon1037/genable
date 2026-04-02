@@ -11,7 +11,7 @@ const supabaseAdmin = createClient(
 export async function POST(req) {
   try {
     const { prompt, referenceImageUrl, type = "cover", aspectRatio = "1:1" } = await req.json();
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || "";
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || "";
 
     console.log(`[BANANA DEBUG] Prompt Organizer Active: "${prompt}" | type: ${type}`);
 
