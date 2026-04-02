@@ -20,6 +20,7 @@ function SessionContent() {
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
   const [isEnded, setIsEnded] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
   
   const [permissions, setPermissions] = useState({
     audio: false,
@@ -47,22 +48,32 @@ function SessionContent() {
 
   async function initSession() {
     setLoading(true);
+    setFetchError(null);
     try {
+      console.log("Fetching project for ID:", projectId);
       const projData = await getProjectById(projectId);
-      setProject(projData);
+      console.log("Project data received:", projData);
+      
+      if (!projData) {
+        // Explicitly handle project not found
+        setProject(null);
+      } else {
+        setProject(projData);
 
-      let sess = await findSession(projectId, userIdInput);
-      if (!sess) {
-        sess = await createSession(projectId, userIdInput);
-      }
-      setSessionId(sess.id);
+        let sess = await findSession(projectId, userIdInput);
+        if (!sess) {
+          sess = await createSession(projectId, userIdInput);
+        }
+        setSessionId(sess.id);
 
-      const existingLogs = await getSessionLogs(sess.id);
-      if (existingLogs) {
-        setLogs(existingLogs.map(l => l.content));
+        const existingLogs = await getSessionLogs(sess.id);
+        if (existingLogs) {
+          setLogs(existingLogs.map(l => l.content));
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error("Init session error:", err);
+      setFetchError(err.message || "서버와 통신하는 중 문제가 발생했습니다.");
     } finally {
       setLoading(false);
     }
@@ -135,6 +146,28 @@ function SessionContent() {
           className="bg-white text-black px-10 py-5 rounded-[2rem] font-bold text-[14px] hover:bg-neutral-200 active:scale-95 transition-all shadow-[0_0_40px_rgba(255,255,255,0.1)]"
         >
           확인 및 처음 화면으로
+        </button>
+      </div>
+    );
+  }
+
+  if (isIdVerified && !loading && fetchError) {
+    return (
+      <div className="fixed inset-0 bg-[#f9f9fb] flex flex-col items-center justify-center p-8 z-50 text-center font-sans">
+        <div className="w-20 h-20 rounded-3xl bg-amber-50 flex items-center justify-center mb-6">
+           <Activity className="w-10 h-10 text-amber-500 animate-pulse" />
+        </div>
+        <h2 className="text-2xl font-black italic tracking-tighter text-black mb-2">서버에 연결할 수 없습니다</h2>
+        <p className="text-neutral-400 text-[13px] font-medium leading-relaxed max-w-sm mb-10">
+          모바일 네트워크 환경이나 보안 설정으로 인해<br/>
+          데이터베이스 서버와의 통신이 차단되었을 가능성이 있습니다.
+          <br/><span className="text-[11px] mt-2 block font-mono text-red-400">Error: {fetchError}</span>
+        </p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="bg-black text-white px-8 py-4 rounded-2xl font-bold text-[13px] hover:bg-neutral-800 transition-all"
+        >
+          페이지 새로고침
         </button>
       </div>
     );
