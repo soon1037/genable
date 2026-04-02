@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense, useRef } from "react";
 import { MonitorUp, Mic, Camera, Square, Loader2, Info, ArrowRight, Activity, Terminal, Target, CheckCircle2, Settings2 } from "lucide-react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { getProjectById, findSession, createSession, addSessionLog, getSessionLogs } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 import { useGeminiLiveHook } from "@/lib/gemini-live-hook";
 
