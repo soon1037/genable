@@ -146,11 +146,13 @@ function SessionContent() {
         return;
       }
 
-      // 2. Fallback to standard permanent link logic
+      // 3. Fallback to standard permanent link logic
       if (!sess) {
-        sess = await findSession(projectId, userIdInput);
+        // IMPORTANT: Use projData.id (UUID) instead of projectId (which might be a slug string)
+        const realProjectId = projData.id;
+        sess = await findSession(realProjectId, userIdInput);
         if (!sess) {
-          sess = await createSession(projectId, userIdInput);
+          sess = await createSession(realProjectId, userIdInput);
           // Save IP for new session
           if (clientIp) {
             await updateSession(sess.id, { ip_address: clientIp });

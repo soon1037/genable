@@ -61,8 +61,8 @@ export default function ProjectHistoryPage() {
     return String(data);
   };
 
-  const handleTogglePermanent = async () => {
-    const newValue = project.settings?.is_permanent_enabled === false;
+  const handleStatusChange = async (newValue) => {
+    if (project.settings?.is_permanent_enabled === newValue) return;
     try {
       await updateProject(id, { 
         settings: { ...project.settings, is_permanent_enabled: newValue } 
@@ -73,6 +73,20 @@ export default function ProjectHistoryPage() {
       }));
     } catch (err) {
       alert("설정 변경에 실패했습니다.");
+    }
+  };
+
+  const updateSlug = async (newSlug) => {
+    try {
+      await updateProject(id, {
+        settings: { ...project.settings, slug: newSlug }
+      });
+      setProject(prev => ({
+        ...prev,
+        settings: { ...prev.settings, slug: newSlug }
+      }));
+    } catch (err) {
+      alert("슬러그 업데이트에 실패했습니다.");
     }
   };
 
@@ -98,8 +112,9 @@ export default function ProjectHistoryPage() {
   }
 
   if (!project) return <div>Project not found.</div>;
-
-  const permanentUrl = `${window.location.origin}/session/${id}`;
+  
+  const customSlug = project.settings?.slug;
+  const permanentUrl = `${window.location.origin}/session/${customSlug || id}`;
 
   // Flatten all missions from all stages for column mapping
   const allMissions = project.missions?.flatMap(stage => 
@@ -153,33 +168,55 @@ export default function ProjectHistoryPage() {
            </div>
            
            <div className="grid grid-cols-2 gap-8">
-              <div className="card-premium h-44 flex flex-col justify-between">
+              <div className="card-premium min-h-[176px] flex flex-col justify-between">
                  <div>
                     <div className="flex items-center justify-between">
                        <h4 className="text-sm font-bold flex items-center gap-2">
                            <Globe className="w-4 h-4 text-blue-500" />
                            상시 운영용 URL
                         </h4>
-                        <button 
-                          onClick={handleTogglePermanent}
-                          className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${project.settings?.is_permanent_enabled !== false ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-neutral-100 text-neutral-400 border-neutral-200'}`}
-                        >
-                          {project.settings?.is_permanent_enabled !== false ? 'ON (활성)' : 'OFF (비활성)'}
-                        </button>
+                        {/* Segmented Picker for Status */}
+                        <div className="flex p-1 bg-neutral-100 rounded-xl">
+                          <button 
+                            onClick={() => handleStatusChange(false)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${project.settings?.is_permanent_enabled === false ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                          >
+                            비활성
+                          </button>
+                          <button 
+                            onClick={() => handleStatusChange(true)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${project.settings?.is_permanent_enabled !== false ? 'bg-white text-emerald-600 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                          >
+                            활성
+                          </button>
+                        </div>
                     </div>
                     <p className="text-[11px] text-neutral-400 font-medium mt-1">누구나 언제든 접속 가능한 공식 주소입니다.</p>
                  </div>
-                 <div className="flex p-1 bg-neutral-100 rounded-2xl items-center gap-1">
-                    <div className="flex-1 flex items-center bg-white px-4 py-2.5 rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-                       <span className="text-[10px] font-black text-neutral-300 uppercase tracking-widest mr-2 group-hover:text-blue-500 transition-colors">PATH</span>
-                       <span className="text-[12px] font-mono font-bold text-black truncate">/session/{id}</span>
+
+                 <div className="space-y-3">
+                    {/* Custom Segment (Slug) Input Picker */}
+                    <div className="flex items-center gap-2 bg-neutral-50 px-3 py-1.5 rounded-xl border border-neutral-100">
+                       <span className="text-[10px] font-black text-neutral-300 uppercase tracking-widest shrink-0">SEGMENT</span>
+                       <input 
+                          type="text"
+                          defaultValue={project.settings?.slug || ""}
+                          placeholder={id.split('-')[0]}
+                          onBlur={(e) => updateSlug(e.target.value)}
+                          className="flex-1 bg-transparent text-[12px] font-mono font-bold text-neutral-900 focus:outline-none placeholder:text-neutral-200"
+                       />
+                       <div className="px-2 py-0.5 bg-neutral-100 rounded text-[9px] font-black text-neutral-400">EDIT</div>
                     </div>
-                    <button 
-                       onClick={() => handleCopy(permanentUrl, 'permanent')}
-                       className={`flex items-center justify-center p-3 rounded-xl transition-all ${copying === 'permanent' ? 'bg-emerald-500 text-white' : 'bg-white hover:bg-neutral-50 text-neutral-900 shadow-sm border border-neutral-200'}`}
-                    >
-                       {copying === 'permanent' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    </button>
+
+                    <div className="flex p-1.5 bg-neutral-50 rounded-xl border border-neutral-100 items-center justify-between">
+                       <span className="text-[11px] font-mono text-neutral-400 px-3 truncate max-w-[280px]">{permanentUrl}</span>
+                       <button 
+                          onClick={() => handleCopy(permanentUrl, 'permanent')}
+                          className={`flex items-center justify-center p-2 rounded-lg transition-all ${copying === 'permanent' ? 'bg-emerald-500 text-white' : 'bg-white hover:bg-neutral-100 text-neutral-300 shadow-sm border border-neutral-100'}`}
+                       >
+                          {copying === 'permanent' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                       </button>
+                    </div>
                  </div>
               </div>
 
