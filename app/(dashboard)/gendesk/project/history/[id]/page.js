@@ -8,7 +8,7 @@ import {
   Copy, Check, Clock, User, Globe, Activity,
   CheckCircle2, XCircle, AlertCircle, Loader2, Plus, Info
 } from "lucide-react";
-import { getProjectById, getProjectSessionDetails, createOneTimeSession } from "@/lib/db";
+import { getProjectById, getProjectSessionDetails, createOneTimeSession, updateProject } from "@/lib/db";
 
 const PROJECT_TYPES = [
   { id: 'support', name: '고객지원' },
