@@ -50,8 +50,8 @@ function SessionContent() {
       setUserIdInput(guestId);
       setIsIdVerified(true);
     } else {
-      // 2. Permanent URL: auto-generate Guest ID and Skip Input
-      const randomId = `Visitor-${Math.floor(Math.random() * 100000).toString().padStart(5, '0')}`;
+      // 2. Permanent URL: auto-generate Guest ID (High-Entropy Hash) and Skip Input
+      const randomId = `Visitor-${window.crypto.randomUUID().split('-')[0].toUpperCase()}`;
       setUserIdInput(randomId);
       setIsIdVerified(true);
     }
