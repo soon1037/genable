@@ -76,20 +76,6 @@ export default function ProjectHistoryPage() {
     }
   };
 
-  const updateSlug = async (newSlug) => {
-    try {
-      await updateProject(id, {
-        settings: { ...project.settings, slug: newSlug }
-      });
-      setProject(prev => ({
-        ...prev,
-        settings: { ...prev.settings, slug: newSlug }
-      }));
-    } catch (err) {
-      alert("슬러그 업데이트에 실패했습니다.");
-    }
-  };
-
   const handleCreateOneTime = async () => {
     try {
       const sess = await createOneTimeSession(id);
@@ -113,8 +99,7 @@ export default function ProjectHistoryPage() {
 
   if (!project) return <div>Project not found.</div>;
   
-  const customSlug = project.settings?.slug;
-  const permanentUrl = `${window.location.origin}/session/${customSlug || id}`;
+  const permanentUrl = `${window.location.origin}/session/${id}`;
 
   // Flatten all missions from all stages for column mapping
   const allMissions = project.missions?.flatMap(stage => 
@@ -194,22 +179,9 @@ export default function ProjectHistoryPage() {
                     <p className="text-[11px] text-neutral-400 font-medium mt-1">누구나 언제든 접속 가능한 공식 주소입니다.</p>
                  </div>
 
-                 <div className="space-y-3">
-                    {/* Custom Segment (Slug) Input Picker */}
-                    <div className="flex items-center gap-2 bg-neutral-50 px-3 py-1.5 rounded-xl border border-neutral-100">
-                       <span className="text-[10px] font-black text-neutral-300 uppercase tracking-widest shrink-0">SEGMENT</span>
-                       <input 
-                          type="text"
-                          defaultValue={project.settings?.slug || ""}
-                          placeholder={id.split('-')[0]}
-                          onBlur={(e) => updateSlug(e.target.value)}
-                          className="flex-1 bg-transparent text-[12px] font-mono font-bold text-neutral-900 focus:outline-none placeholder:text-neutral-200"
-                       />
-                       <div className="px-2 py-0.5 bg-neutral-100 rounded text-[9px] font-black text-neutral-400">EDIT</div>
-                    </div>
-
+                 <div className="space-y-3 mt-4">
                     <div className="flex p-1.5 bg-neutral-50 rounded-xl border border-neutral-100 items-center justify-between">
-                       <span className="text-[11px] font-mono text-neutral-400 px-3 truncate max-w-[280px]">{permanentUrl}</span>
+                       <span className="text-[11px] font-mono text-neutral-400 px-3 truncate max-w-[350px]">{permanentUrl}</span>
                        <button 
                           onClick={() => handleCopy(permanentUrl, 'permanent')}
                           className={`flex items-center justify-center p-2 rounded-lg transition-all ${copying === 'permanent' ? 'bg-emerald-500 text-white' : 'bg-white hover:bg-neutral-100 text-neutral-300 shadow-sm border border-neutral-100'}`}
