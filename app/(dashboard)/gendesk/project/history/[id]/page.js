@@ -61,13 +61,30 @@ export default function ProjectHistoryPage() {
     return String(data);
   };
 
+  const handleTogglePermanent = async () => {
+    const newValue = project.settings?.is_permanent_enabled === false;
+    try {
+      await updateProject(id, { 
+        settings: { ...project.settings, is_permanent_enabled: newValue } 
+      });
+      setProject(prev => ({
+        ...prev,
+        settings: { ...prev.settings, is_permanent_enabled: newValue }
+      }));
+    } catch (err) {
+      alert("설정 변경에 실패했습니다.");
+    }
+  };
+
   const handleCreateOneTime = async () => {
     try {
       const sess = await createOneTimeSession(id);
+      if (!sess) throw new Error("No session created");
       const url = `${window.location.origin}/session/${id}?id=${sess.id}`;
       handleCopy(url, 'one-time');
       fetchData(); // Refresh list
     } catch (err) {
+      console.error("1-time link error:", err);
       alert("1회용 링크 생성에 실패했습니다.");
     }
   };
@@ -116,13 +133,9 @@ export default function ProjectHistoryPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-             <Link href={`/gendesk/project/${id}/settings`} className="btn-secondary flex items-center gap-2 py-2.5 px-4 shadow-none border-neutral-200">
+             <Link href={`/gendesk/project/${id}/settings`} className="btn-primary flex items-center gap-2 py-2.5 px-6 shadow-xl shadow-black/5">
                 <Settings className="w-4 h-4" />
-                시스템 설정
-             </Link>
-             <Link href={`/gendesk/project/new?edit=${id}`} className="btn-primary flex items-center gap-2 py-2.5 px-4">
-                <Edit className="w-4 h-4" />
-                프로젝트 수정
+                수정하기
              </Link>
           </div>
         </div>
@@ -143,15 +156,18 @@ export default function ProjectHistoryPage() {
            <div className="grid grid-cols-2 gap-8">
               <div className="card-premium h-44 flex flex-col justify-between">
                  <div>
-                    <h4 className="text-sm font-bold flex items-center gap-2">
-                        <Globe className="w-4 h-4 text-blue-500" />
-                        상시 운영용 URL
-                        {project.settings?.is_permanent_enabled !== false ? (
-                          <span className="px-2 py-0.5 bg-emerald-50 text-[9px] font-black text-emerald-600 uppercase tracking-widest rounded border border-emerald-100">Active</span>
-                        ) : (
-                          <span className="px-2 py-0.5 bg-red-50 text-[9px] font-black text-red-500 uppercase tracking-widest rounded border border-red-100">Disabled</span>
-                        )}
-                     </h4>
+                    <div className="flex items-center justify-between">
+                       <h4 className="text-sm font-bold flex items-center gap-2">
+                           <Globe className="w-4 h-4 text-blue-500" />
+                           상시 운영용 URL
+                        </h4>
+                        <button 
+                          onClick={handleTogglePermanent}
+                          className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${project.settings?.is_permanent_enabled !== false ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-neutral-100 text-neutral-400 border-neutral-200'}`}
+                        >
+                          {project.settings?.is_permanent_enabled !== false ? 'ON (Active)' : 'OFF (Hidden)'}
+                        </button>
+                    </div>
                     <p className="text-[11px] text-neutral-400 font-medium mt-1">누구나 언제든 접속 가능한 프로젝트 공식 주소입니다.</p>
                  </div>
                  <div className="flex p-1.5 bg-neutral-50 rounded-xl border border-neutral-100 items-center justify-between">
@@ -194,9 +210,10 @@ export default function ProjectHistoryPage() {
               <table className="table-premium">
                   <thead>
                     <tr>
-                       <th className="min-w-[140px]">접속 IP 주소</th>
+                       <th className="min-w-[120px]">세션 구분</th>
+                       <th className="min-w-[140px]">접속 ID / IP</th>
                        <th className="min-w-[180px]">세션 시각</th>
-                       <th className="min-w-[100px]">상태</th>
+                       <th className="min-w-[100px]">진행 상태</th>
                        {/* Dynamic Mission Columns */}
                        {allMissions.map(m => (
                          <th key={m.id} className="min-w-[120px] max-w-[200px] truncate" title={m.title}>
@@ -209,8 +226,16 @@ export default function ProjectHistoryPage() {
                  <tbody>
                     {sessions.map((sess) => (
                       <tr key={sess.id} className="group">
-                         <td className="font-mono text-xs font-bold text-neutral-400">
-                            {sess.ip_address || "알 수 없음"}
+                         <td>
+                            <div className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${sess.id === sess.guest_id ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-neutral-50 text-neutral-400 border-neutral-100'}`}>
+                               {sess.id === sess.guest_id ? '1-Time' : 'Permanent'}
+                            </div>
+                         </td>
+                         <td className="space-y-0.5">
+                            <div className="text-[11px] font-bold text-neutral-900">{sess.guest_id || 'Unknown'}</div>
+                            <div className="font-mono text-[9px] font-bold text-neutral-300">
+                               {sess.ip_address || "IP 미확인"}
+                            </div>
                          </td>
                          <td>
                             <div className="space-y-1">
