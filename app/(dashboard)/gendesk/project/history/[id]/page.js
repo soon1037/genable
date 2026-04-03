@@ -84,8 +84,9 @@ export default function ProjectHistoryPage() {
       handleCopy(url, 'one-time');
       fetchData(); // Refresh list
     } catch (err) {
-      console.error("1-time link error:", err);
-      alert("1회용 링크 생성에 실패했습니다.");
+      console.error("1-time link error details:", err);
+      const msg = err?.message || JSON.stringify(err);
+      alert(`1회용 링크 생성에 실패했습니다: ${msg}`);
     }
   };
 
@@ -180,15 +181,21 @@ export default function ProjectHistoryPage() {
                  </div>
 
                  <div className="space-y-3 mt-4">
-                    <div className="flex p-1.5 bg-neutral-50 rounded-xl border border-neutral-100 items-center justify-between">
-                       <span className="text-[11px] font-mono text-neutral-400 px-3 truncate max-w-[350px]">{permanentUrl}</span>
-                       <button 
-                          onClick={() => handleCopy(permanentUrl, 'permanent')}
-                          className={`flex items-center justify-center p-2 rounded-lg transition-all ${copying === 'permanent' ? 'bg-emerald-500 text-white' : 'bg-white hover:bg-neutral-100 text-neutral-300 shadow-sm border border-neutral-100'}`}
-                       >
-                          {copying === 'permanent' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                       </button>
-                    </div>
+                    {project.settings?.is_permanent_enabled !== false ? (
+                      <div className="flex p-1.5 bg-neutral-50 rounded-xl border border-neutral-100 items-center justify-between animate-in fade-in zoom-in duration-300">
+                         <span className="text-[11px] font-mono text-neutral-400 px-3 truncate max-w-[350px]">{permanentUrl}</span>
+                         <button 
+                            onClick={() => handleCopy(permanentUrl, 'permanent')}
+                            className={`flex items-center justify-center p-2 rounded-lg transition-all ${copying === 'permanent' ? 'bg-emerald-500 text-white' : 'bg-white hover:bg-neutral-100 text-neutral-300 shadow-sm border border-neutral-200'}`}
+                         >
+                            {copying === 'permanent' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                         </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center p-4 bg-neutral-50 rounded-xl border border-dashed border-neutral-200 text-neutral-400 text-[11px] font-bold italic animate-in fade-in slide-in-from-bottom-2 duration-300">
+                         상시 운영용 URL이 비활성(OFF) 상태입니다.
+                      </div>
+                    )}
                  </div>
               </div>
 
