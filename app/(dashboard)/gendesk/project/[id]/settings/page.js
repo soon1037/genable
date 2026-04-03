@@ -3,10 +3,8 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { 
-  ChevronLeft, CheckCircle2, 
-  Headphones, Camera, Monitor, 
-  Plus, Trash2, 
-  HelpCircle, Rocket, GraduationCap, Users, TestTube,
+  ChevronLeft, CheckCircle2, Headphones, Camera, Monitor, 
+  Plus, Trash2, HelpCircle, Rocket, GraduationCap, Users, TestTube,
   PlayCircle, Loader2, Volume2, ChevronDown, Settings2, Target,
   Sparkles, ArrowRight, X, ArrowUpRight, ChevronRight, Globe,
   XCircle, Activity
@@ -42,7 +40,8 @@ function EditProjectContent() {
     url_type: "one-time",
     duration: 600,
     is_unlimited: true,
-    show_warning: true
+    show_warning: true,
+    is_permanent_enabled: true
   });
 
   // 1. Fetch Project Data & Voices
@@ -91,6 +90,7 @@ function EditProjectContent() {
             duration: proj.settings?.duration || 600,
             is_unlimited: proj.settings?.duration === null,
             show_warning: proj.settings?.show_warning ?? true,
+            is_permanent_enabled: proj.settings?.is_permanent_enabled ?? true,
             ai_prompt: proj.ai_prompt || ""
           });
         }
@@ -247,7 +247,8 @@ ${s.missions.map(m => `  * [${m.type === 'collect' ? '데이터 수집' : '정�
         settings: {
           url_type: formData.url_type,
           duration: formData.is_unlimited ? null : formData.duration,
-          show_warning: formData.show_warning
+          show_warning: formData.show_warning,
+          is_permanent_enabled: formData.is_permanent_enabled
         }
       });
 
@@ -394,6 +395,22 @@ ${s.missions.map(m => `  * [${m.type === 'collect' ? '데이터 수집' : '정�
                   ) : (
                     <span className="text-[10px] font-bold text-neutral-400 px-1 py-1.5">제한없음</span>
                   )}
+                </div>
+              </div>
+              <div className="w-px h-4 bg-neutral-100" />
+
+              <div className="flex items-center gap-4">
+                <label className="label-premium !mb-0 shrink-0">상시 URL 노출</label>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => updateFormData("is_permanent_enabled", !formData.is_permanent_enabled)}
+                    className={`w-6 h-3 rounded-full relative transition-all ${formData.is_permanent_enabled ? "bg-emerald-500" : "bg-neutral-200"}`}
+                  >
+                    <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all ${formData.is_permanent_enabled ? "left-3.5" : "left-0.5"}`} />
+                  </button>
+                  <span className={`text-[10px] font-bold px-1 py-1.5 ${formData.is_permanent_enabled ? "text-emerald-600" : "text-neutral-400"}`}>
+                    {formData.is_permanent_enabled ? "활성" : "비활성"}
+                  </span>
                 </div>
               </div>
            </div>

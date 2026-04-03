@@ -5,9 +5,9 @@ import Link from "next/link";
 import { 
   PlusCircle, MoreHorizontal, PlayCircle, Settings, Loader2,
   HelpCircle, Rocket, GraduationCap, Users, TestTube,
-  CheckCircle2, ArrowRight, X, BarChart3
+  CheckCircle2, ArrowRight, X, BarChart3, Activity
 } from "lucide-react";
-import { getProjects } from "@/lib/db";
+import { getProjects, getProjectSessionCounts } from "@/lib/db";
 import { useRouter } from "next/navigation";
 
 const PROJECT_TYPES = [
@@ -46,6 +46,7 @@ const PROJECT_TYPES = [
 export default function ProjectsPage() {
   const router = useRouter();
   const [projects, setProjects] = useState([]);
+  const [sessionCounts, setSessionCounts] = useState({});
   const [loading, setLoading] = useState(true);
   
   // Modal State
@@ -59,8 +60,12 @@ export default function ProjectsPage() {
 
   async function fetchProjects() {
     try {
-      const data = await getProjects();
-      setProjects(data || []);
+      const [projData, counts] = await Promise.all([
+        getProjects(),
+        getProjectSessionCounts()
+      ]);
+      setProjects(projData || []);
+      setSessionCounts(counts || {});
     } catch (err) {
       console.error("Failed to fetch projects:", err);
     } finally {
@@ -201,41 +206,41 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="table-container-premium">
-          <table className="table-premium">
+           <table className="table-premium">
             <thead>
               <tr>
-                 <th>프로젝트 상세 (Project Description)</th>
-                 <th>생성 일시 (Created Date)</th>
-                 <th className="md:text-right">액션 (Actions)</th>
+                 <th>프로젝트 제목</th>
+                 <th>참여 세션</th>
+                 <th>생성 일시</th>
+                 <th className="md:text-right">관리 액션</th>
               </tr>
             </thead>
             <tbody>
               {projects.map((proj) => (
                 <tr key={proj.id} className="group">
                   <td>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-neutral-900 text-base">{proj.name}</span>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest bg-neutral-100 px-2 py-0.5 rounded-md">{proj.type || 'GUIDE'}</span>
-                        <span className="text-xs text-neutral-400 font-medium line-clamp-1">{proj.description || '상세 설명이 없습니다.'}</span>
-                      </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest bg-neutral-50 px-2 py-0.5 rounded-md border border-neutral-100 shrink-0">
+                        {PROJECT_TYPES.find(t => t.id === proj.type)?.name || '기타'}
+                      </span>
+                      <span className="font-bold text-neutral-900 text-[13px] shrink-0 min-w-[120px]">{proj.name}</span>
                     </div>
                   </td>
-                  <td>
+                  <td className="text-[11px] font-bold text-neutral-800">
+                    {sessionCounts[proj.id] || 0}<span className="text-neutral-400 font-medium ml-1">회</span>
+                  </td>
+                  <td className="text-[11px] font-bold text-neutral-400">
                     {new Date(proj.created_at).toLocaleDateString('ko-KR')}
                   </td>
-                  <td className="md:text-right">
-                    <div className="flex items-center md:justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Link href={`/gendesk/project/${proj.id}/results`} className="text-neutral-300 hover:text-black transition-colors font-bold text-[10px] uppercase tracking-widest flex items-center gap-1.5" title="View Results">
-                        <BarChart3 className="w-4 h-4" />
-                        결과 보기
+                   <td className="md:text-right">
+                    <div className="flex items-center md:justify-end gap-6 opacity-100 transition-opacity">
+                      <Link href={`/gendesk/project/history/${proj.id}`} className="text-neutral-300 hover:text-black transition-colors font-bold text-[11px] uppercase tracking-widest flex items-center gap-2" title="View History">
+                        <Activity className="w-4 h-4" />
+                        히스토리
                       </Link>
-                      <Link href={`/gendesk/history`} className="text-neutral-300 hover:text-black transition-colors font-bold text-[10px] uppercase tracking-widest flex items-center gap-1.5" title="Generate Link">
-                        <PlayCircle className="w-4 h-4" />
-                        링크 발송
-                      </Link>
-                      <Link href={`/gendesk/project/${proj.id}/settings`} className="text-neutral-300 hover:text-black transition-all" title="Settings">
+                      <Link href={`/gendesk/project/${proj.id}/settings`} className="text-neutral-300 hover:text-black transition-colors font-bold text-[11px] uppercase tracking-widest flex items-center gap-2" title="Settings">
                         <Settings className="w-4 h-4" />
+                        설정
                       </Link>
                     </div>
                   </td>

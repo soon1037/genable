@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useState, Suspense, useRef } from "react";
-import { MonitorUp, Mic, Camera, Square, Loader2, Info, ArrowRight, Activity, Terminal, Target, CheckCircle2, Settings2 } from "lucide-react";
+import { MonitorUp, Mic, Camera, Square, Loader2, Info, ArrowRight, Activity, Terminal, Target, CheckCircle2, Settings2, Globe } from "lucide-react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
-import { getProjectById, findSession, createSession, addSessionLog, getSessionLogs } from "@/lib/db";
+import { getProjectById, findSession, createSession, addSessionLog, getSessionLogs, updateSession } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 import { useGeminiLiveHook } from "@/lib/gemini-live-hook";
 
@@ -14,9 +15,9 @@ function SessionContent() {
   
   const [project, setProject] = useState(null);
   const [sessionId, setSessionId] = useState(null);
-  const [isIdVerified, setIsIdVerified] = useState(!!guestId);
+  const [isIdVerified, setIsIdVerified] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
-  const [userIdInput, setUserIdInput] = useState(guestId || "");
+  const [userIdInput, setUserIdInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
   const [isEnded, setIsEnded] = useState(false);
@@ -26,11 +27,35 @@ function SessionContent() {
     camera: false,
     screen: false
   });
+  const [clientIp, setClientIp] = useState("");
+  const [isUrlDisabled, setIsUrlDisabled] = useState(false);
+
+  // Fetch Client IP
+  useEffect(() => {
+    fetch("https://api.ipify.org?format=json")
+      .then(res => res.json())
+      .then(data => setClientIp(data.ip))
+      .catch(err => console.error("IP collection failed:", err));
+  }, []);
 
   const { 
     status, isSpeaking, logs, setLogs, startSession, stopSession, 
     transcript, conversation, currentStageIndex, completedMissions 
   } = useGeminiLiveHook("aidesk-video");
+
+  // Handle Session Entry Initialization
+  useEffect(() => {
+    if (guestId) {
+      // 1. One-time link: pre-fill with guestId and verify
+      setUserIdInput(guestId);
+      setIsIdVerified(true);
+    } else {
+      // 2. Permanent URL: auto-generate Guest ID and Skip Input
+      const randomId = `Visitor-${Math.floor(Math.random() * 100000).toString().padStart(5, '0')}`;
+      setUserIdInput(randomId);
+      setIsIdVerified(true);
+    }
+  }, [guestId]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -45,16 +70,79 @@ function SessionContent() {
     }
   }, [isIdVerified, projectId, userIdInput]);
 
+  // Sync conversation to DB in real-time
+  useEffect(() => {
+    if (sessionId && conversation.length > 0) {
+      const syncTranscript = async () => {
+        try {
+          await updateSession(sessionId, { transcript: conversation });
+        } catch (err) {
+          console.error("Failed to sync transcript:", err);
+        }
+      };
+      syncTranscript();
+    }
+  }, [conversation, sessionId]);
+
+  const handleEndSession = async () => {
+    stopSession();
+    setIsEnded(true);
+    if (sessionId) {
+      try {
+        await updateSession(sessionId, { 
+          ended_at: new Date().toISOString(),
+          status: 'completed'
+        });
+      } catch (err) {
+        console.error("Failed to update end session:", err);
+      }
+    }
+  };
+
   async function initSession() {
     setLoading(true);
     try {
       const projData = await getProjectById(projectId);
       setProject(projData);
 
-      let sess = await findSession(projectId, userIdInput);
-      if (!sess) {
-        sess = await createSession(projectId, userIdInput);
+      let sess = null;
+      
+      // 1. Check if we're using a 1-time link (id parameter exists)
+      if (guestId) {
+        const { data: existingSess } = await supabase.from('sessions').select('*').eq('id', guestId).maybeSingle();
+        if (existingSess) {
+          if (existingSess.status === 'pending') {
+            // First time using this 1-time link!
+            sess = await updateSession(guestId, { 
+              status: 'active', 
+              ip_address: clientIp, 
+              guest_id: userIdInput || 'Guest' 
+            });
+          } else {
+            sess = existingSess;
+          }
+        }
       }
+
+      // 2. Check if permanent URL is disabled
+      if (!guestId && projData.settings?.is_permanent_enabled === false) {
+        setIsUrlDisabled(true);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Fallback to standard permanent link logic
+      if (!sess) {
+        sess = await findSession(projectId, userIdInput);
+        if (!sess) {
+          sess = await createSession(projectId, userIdInput);
+          // Save IP for new session
+          if (clientIp) {
+            await updateSession(sess.id, { ip_address: clientIp });
+          }
+        }
+      }
+      
       setSessionId(sess.id);
 
       const existingLogs = await getSessionLogs(sess.id);
@@ -140,6 +228,21 @@ function SessionContent() {
     );
   }
 
+  if (isUrlDisabled) {
+    return (
+      <div className="fixed inset-0 bg-[#f9f9fb] flex flex-col items-center justify-center p-8 z-50 text-center font-sans">
+        <div className="w-20 h-20 rounded-3xl bg-neutral-900 flex items-center justify-center mb-6 shadow-xl shadow-black/10">
+           <Globe className="w-10 h-10 text-white opacity-20" />
+        </div>
+        <h2 className="text-2xl font-black italic tracking-tighter text-black mb-2">상시 운영 URL이 비활성화되었습니다</h2>
+        <p className="text-neutral-400 text-[13px] font-medium leading-relaxed max-w-sm mb-10">
+          이 서비스의 상시 접속 주소는 관리자에 의해 잠시 중단되었습니다.<br/>
+          부여받은 **1회용 보안 링크**를 사용하여 대화에 다시 참여해 주세요.
+        </p>
+      </div>
+    );
+  }
+
   if (isIdVerified && !loading && !project) {
     return (
       <div className="fixed inset-0 bg-[#f9f9fb] flex flex-col items-center justify-center p-8 z-50 text-center font-sans">
@@ -208,10 +311,22 @@ function SessionContent() {
               <Settings2 className="w-6 h-6 text-neutral-400" />
             </div>
             <h2 className="text-2xl font-black italic tracking-tighter text-black">준비 되셨나요?</h2>
-            <p className="text-neutral-400 text-[13px] font-medium leading-relaxed">
-              성공적인 세션 진행을 위해 다음 권한들을 미리 확인해 주세요.<br/>
-              필수 권한이 모두 활성화되면 서비스를 시작할 수 있습니다.
-            </p>
+            <div className="flex flex-col items-center gap-1">
+               <p className="text-neutral-400 text-[13px] font-medium leading-relaxed">
+                 성공적인 세션 진행을 위해 다음 권한들을 미리 확인해 주세요.
+               </p>
+               <div className="mt-4 px-4 py-2 bg-neutral-900 rounded-2xl flex items-center gap-3 shadow-xl shadow-black/10">
+                  <Globe className="w-4 h-4 text-white/40" />
+                  <div className="flex items-center gap-2">
+                     <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Connect IP</span>
+                     <span className="text-[13px] font-mono font-bold text-white tracking-widest">
+                        {clientIp || (
+                           <div className="w-12 h-3 bg-white/5 animate-pulse rounded" />
+                        )}
+                     </span>
+                  </div>
+               </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4">
@@ -346,19 +461,19 @@ function SessionContent() {
            </div>
         </main>
 
-        <div className="pb-24 px-8 max-w-xl mx-auto w-full space-y-8">
-           <div className="space-y-4 min-h-[140px] flex flex-col justify-end">
+        <div className="px-8 max-w-2xl mx-auto w-full flex-1 flex flex-col justify-end pb-48">
+           <div className="space-y-6 flex flex-col justify-end">
               {lastMsg && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                   <p className="text-white/30 text-[13px] font-medium leading-relaxed italic text-center px-4">
+                   <p className="text-white/20 text-[12px] font-medium leading-relaxed italic text-center px-4 mb-4">
                      {lastMsg.role === 'user' ? 'GUEST: ' : 'AI: '}{lastMsg.text}
                    </p>
                 </div>
               )}
-              <div className="relative">
+              <div className="relative min-h-[120px] flex flex-col justify-center">
                 {(transcript.user || transcript.assistant) ? (
                    <div className="animate-in fade-in zoom-in-95 duration-500">
-                     <p className="text-white text-[18px] md:text-[22px] font-bold text-center leading-tight tracking-tight drop-shadow-sm whitespace-pre-wrap">
+                     <p className="text-white text-[20px] md:text-[26px] font-bold text-center leading-tight tracking-tight drop-shadow-2xl whitespace-pre-wrap">
                         {transcript.assistant || transcript.user}
                      </p>
                    </div>
@@ -370,21 +485,21 @@ function SessionContent() {
                 )}
               </div>
            </div>
-           {/* End Session Button */}
-           <div className="flex justify-center pt-8 pb-12 relative z-50">
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  stopSession();
-                  setIsEnded(true);
-                }}
-                style={{ touchAction: 'manipulation' }}
-                className="group relative flex items-center justify-center w-20 h-20 rounded-full bg-[#E11D48] active:bg-[#F43F5E] text-white transition-all duration-300 scale-100 active:scale-90 shadow-[0_0_50px_rgba(225,29,72,0.4)]"
-              >
-                <div className="absolute inset-0 rounded-full bg-[#E11D48] animate-ping opacity-20 pointer-events-none"></div>
-                <Square className="w-8 h-8 fill-current" />
-              </button>
-           </div>
+        </div>
+
+        {/* End Session Button - Fixed to Bottom */}
+        <div className="fixed bottom-0 left-0 right-0 flex justify-center pb-16 z-50 pointer-events-none">
+           <button 
+             onClick={(e) => {
+               e.stopPropagation();
+               handleEndSession();
+             }}
+             style={{ touchAction: 'manipulation' }}
+             className="pointer-events-auto group relative flex items-center justify-center w-20 h-20 rounded-full bg-[#E11D48] active:bg-[#F43F5E] text-white transition-all duration-300 scale-100 active:scale-90 shadow-[0_0_50px_rgba(225,29,72,0.4)]"
+           >
+             <div className="absolute inset-0 rounded-full bg-[#E11D48] animate-ping opacity-20 pointer-events-none"></div>
+             <Square className="w-8 h-8 fill-current" strokeWidth={0} />
+           </button>
         </div>
 
         <style jsx global>{`
@@ -438,10 +553,7 @@ function SessionContent() {
           )}
           {status !== "idle" && (
             <button
-              onClick={() => {
-                stopSession();
-                setIsEnded(true);
-              }}
+              onClick={handleEndSession}
               className="flex items-center gap-2 bg-white hover:bg-neutral-50 text-red-500 border border-neutral-200 px-5 py-2.5 rounded-xl text-[13px] font-bold transition-all active:scale-95 shadow-sm"
             >
               <Square className="w-3.5 h-3.5 fill-current" />
