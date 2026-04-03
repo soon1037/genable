@@ -335,7 +335,7 @@ export default function DashboardLayout({ children }) {
         </header>
 
         {/* Scrollable Main Content */}
-        <main className="flex-1 overflow-auto bg-white p-8">
+        <main className="flex-1 overflow-auto bg-white pt-0 px-8 pb-8">
           <div className="w-full">
             {children}
           </div>
