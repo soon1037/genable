@@ -129,7 +129,6 @@ export default function ProjectHistoryPage() {
                  </span>
                  <h1 className="text-xl font-black italic tracking-tighter">{project.name}</h1>
               </div>
-              <p className="text-[11px] font-bold text-neutral-400">프로젝트 세션 히스토리 및 관리 센터</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -146,7 +145,7 @@ export default function ProjectHistoryPage() {
         {/* Link Management Section */}
         <section className="space-y-6">
            <div className="flex items-center justify-between">
-              <label className="label-premium">링크 관리 (Link Management)</label>
+              <label className="label-premium">링크 관리</label>
               <div className="flex items-center gap-2 text-[11px] font-bold text-neutral-300">
                  <Info className="w-3.5 h-3.5" />
                  1회용 링크는 접속 후 즉시 만료됩니다.
@@ -165,16 +164,19 @@ export default function ProjectHistoryPage() {
                           onClick={handleTogglePermanent}
                           className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${project.settings?.is_permanent_enabled !== false ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-neutral-100 text-neutral-400 border-neutral-200'}`}
                         >
-                          {project.settings?.is_permanent_enabled !== false ? 'ON (Active)' : 'OFF (Hidden)'}
+                          {project.settings?.is_permanent_enabled !== false ? 'ON (활성)' : 'OFF (비활성)'}
                         </button>
                     </div>
-                    <p className="text-[11px] text-neutral-400 font-medium mt-1">누구나 언제든 접속 가능한 프로젝트 공식 주소입니다.</p>
+                    <p className="text-[11px] text-neutral-400 font-medium mt-1">누구나 언제든 접속 가능한 공식 주소입니다.</p>
                  </div>
-                 <div className="flex p-1.5 bg-neutral-50 rounded-xl border border-neutral-100 items-center justify-between">
-                    <span className="text-[11px] font-mono text-neutral-400 px-3 truncate max-w-[280px]">{permanentUrl}</span>
+                 <div className="flex p-1 bg-neutral-100 rounded-2xl items-center gap-1">
+                    <div className="flex-1 flex items-center bg-white px-4 py-2.5 rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+                       <span className="text-[10px] font-black text-neutral-300 uppercase tracking-widest mr-2 group-hover:text-blue-500 transition-colors">PATH</span>
+                       <span className="text-[12px] font-mono font-bold text-black truncate">/session/{id}</span>
+                    </div>
                     <button 
                        onClick={() => handleCopy(permanentUrl, 'permanent')}
-                       className={`flex items-center justify-center p-2 rounded-lg transition-all ${copying === 'permanent' ? 'bg-emerald-500 text-white' : 'bg-white hover:bg-neutral-100 text-neutral-300 shadow-sm'}`}
+                       className={`flex items-center justify-center p-3 rounded-xl transition-all ${copying === 'permanent' ? 'bg-emerald-500 text-white' : 'bg-white hover:bg-neutral-50 text-neutral-900 shadow-sm border border-neutral-200'}`}
                     >
                        {copying === 'permanent' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     </button>
@@ -188,9 +190,9 @@ export default function ProjectHistoryPage() {
                           <LinkIcon className="w-4 h-4 text-emerald-400" />
                           1회용 보안 링크
                        </h4>
-                       <p className="text-[11px] text-white/40 font-medium mt-1">검증된 사용자에게만 전송하는 단일 접속 주소입니다.</p>
+                       <p className="text-[11px] text-white/40 font-medium mt-1">수동 발급된 단일 접속 주소입니다.</p>
                     </div>
-                    <div className="px-2 py-1 bg-white/5 rounded-lg text-[10px] font-black text-white/20 uppercase tracking-widest">Secure</div>
+                    <div className="px-2 py-1 bg-white/5 rounded-lg text-[10px] font-black text-white/20 uppercase tracking-widest">보안</div>
                  </div>
                  <button 
                     onClick={handleCreateOneTime}
@@ -205,7 +207,7 @@ export default function ProjectHistoryPage() {
 
         {/* History Table Section */}
         <section className="animate-in fade-in slide-in-from-bottom-5 duration-700">
-           <label className="label-premium">상세 세션 히스토리 (Session History)</label>
+           <label className="label-premium">상세 세션 히스토리</label>
            <div className="table-container-premium mt-6 overflow-x-auto">
               <table className="table-premium">
                   <thead>
@@ -227,12 +229,12 @@ export default function ProjectHistoryPage() {
                     {sessions.map((sess) => (
                       <tr key={sess.id} className="group">
                          <td>
-                            <div className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${sess.id === sess.guest_id ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-neutral-50 text-neutral-400 border-neutral-100'}`}>
-                               {sess.id === sess.guest_id ? '1-Time' : 'Permanent'}
+                            <div className={`inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border ${sess.id === sess.guest_id ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-neutral-50 text-neutral-400 border-neutral-100'}`}>
+                               {sess.id === sess.guest_id ? '1회용' : '상시'}
                             </div>
                          </td>
                          <td className="space-y-0.5">
-                            <div className="text-[11px] font-bold text-neutral-900">{sess.guest_id || 'Unknown'}</div>
+                            <div className="text-[11px] font-bold text-neutral-900">{sess.guest_id || '미확인'}</div>
                             <div className="font-mono text-[9px] font-bold text-neutral-300">
                                {sess.ip_address || "IP 미확인"}
                             </div>
@@ -286,7 +288,7 @@ export default function ProjectHistoryPage() {
                                  <div className="flex items-center gap-2">
                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${result.status === 'success' ? 'bg-emerald-500' : 'bg-red-400'}`} />
                                    <span className={`text-[11px] font-bold truncate max-w-[150px] ${m.type === 'verify' ? (result.status === 'success' ? 'text-emerald-600' : 'text-red-500') : 'text-neutral-900'}`}>
-                                      {m.type === 'collect' ? renderResultData(result.result_data) : (result.status === 'success' ? 'YES' : 'NO')}
+                                      {m.type === 'collect' ? renderResultData(result.result_data) : (result.status === 'success' ? '성공' : '실패')}
                                    </span>
                                  </div>
                                ) : (
