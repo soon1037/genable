@@ -70,6 +70,21 @@ function SessionContent() {
     }
   }, [isIdVerified, projectId, userIdInput]);
 
+  // Sync IP Address to Session as soon as both are ready
+  useEffect(() => {
+    if (sessionId && clientIp) {
+      const syncIp = async () => {
+        try {
+          await updateSession(sessionId, { ip_address: clientIp });
+          console.log("[SESSION] IP Address synced to DB:", clientIp);
+        } catch (err) {
+          console.error("Failed to sync IP address:", err);
+        }
+      };
+      syncIp();
+    }
+  }, [sessionId, clientIp]);
+
   // Sync conversation to DB in real-time
   useEffect(() => {
     if (sessionId && conversation.length > 0) {
@@ -394,15 +409,24 @@ function SessionContent() {
 
           <div className="pt-4">
             <button 
-              disabled={!isReadyToJoin() || loading}
+              disabled={!isReadyToJoin() || loading || !sessionId}
               onClick={() => {
                 setHasJoined(true);
                 startSession({ ...project, current_session_id: sessionId });
               }}
               className="w-full flex items-center justify-center gap-2 bg-black hover:bg-neutral-800 disabled:bg-neutral-100 disabled:text-neutral-300 text-white px-5 py-5 rounded-[1.5rem] font-bold text-[14px] transition-all scale-100 active:scale-95"
             >
-              세션 입장 및 시작하기
-              <ArrowRight className="w-4 h-4" strokeWidth={3} />
+              {!sessionId ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  ID 발급 중...
+                </>
+              ) : (
+                <>
+                  세션 입장 및 시작하기
+                  <ArrowRight className="w-4 h-4" strokeWidth={3} />
+                </>
+              )}
             </button>
           </div>
         </div>
