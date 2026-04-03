@@ -114,7 +114,7 @@ export default function ProjectHistoryPage() {
     <div className="min-h-screen bg-white font-sans text-neutral-900 pb-20">
       {/* Header */}
       <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-40 px-8 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="max-w-7xl mx-auto flex items-start justify-between">
           <div className="flex items-center gap-6">
             <button 
               onClick={() => router.push('/gendesk/project')}
@@ -155,8 +155,8 @@ export default function ProjectHistoryPage() {
            <div className="grid grid-cols-2 gap-8">
               <div className="card-premium min-h-[176px] flex flex-col justify-between">
                  <div>
-                    <div className="flex items-center justify-between">
-                       <h4 className="text-sm font-bold flex items-center gap-2">
+                    <div className="flex items-start justify-between">
+                       <h4 className="text-sm font-bold flex items-center gap-2 mt-1">
                            <Globe className="w-4 h-4 text-blue-500" />
                            상시 운영용 URL
                         </h4>
