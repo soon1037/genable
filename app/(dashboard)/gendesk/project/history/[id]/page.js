@@ -216,7 +216,13 @@ export default function ProjectHistoryPage() {
                             <div className="space-y-1">
                                <div className="flex items-center gap-1.5 text-neutral-900 font-bold text-[12px]">
                                   <Clock className="w-3.5 h-3.5 text-neutral-300" />
-                                  {new Date(sess.created_at).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                  {new Date(sess.created_at).toLocaleString('ko-KR', { 
+                                     timeZone: 'Asia/Seoul', 
+                                     month: 'short', 
+                                     day: 'numeric', 
+                                     hour: '2-digit', 
+                                     minute: '2-digit' 
+                                  })}
                                </div>
                                {sess.ended_at && (
                                  <p className="text-[10px] text-neutral-400 font-medium ml-5">
