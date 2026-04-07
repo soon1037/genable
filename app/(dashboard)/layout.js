@@ -22,6 +22,8 @@ import {
   HelpCircle,
   ExternalLink,
   Layout,
+  LayoutGrid,
+  History,
   FileText
 } from "lucide-react";
 
@@ -64,6 +66,15 @@ export default function DashboardLayout({ children }) {
     }
     initAuth();
 
+    // 🎯 URL 경로에 따른 사이드바 상태 동기화 (새로고침 대응)
+    if (pathname.startsWith("/design")) {
+      setActiveWorkspace("design");
+    } else if (pathname.startsWith("/company")) {
+      setActiveWorkspace("company");
+    } else {
+      setActiveWorkspace("genable"); // Default (Live)
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         router.replace("/login");
@@ -91,9 +102,8 @@ export default function DashboardLayout({ children }) {
     genable: {
       title: "Genable Live",
       items: [
-        { id: "home", label: "홈", href: "/gendesk/home", icon: Home },
-        { id: "project", label: "프로젝트", href: "/gendesk/project", icon: Type },
-        { id: "history", label: "히스토리", href: "/gendesk/history", icon: Zap },
+        { id: "projects", label: "프로젝트", href: "/gendesk/project", icon: LayoutGrid },
+        { id: "history", label: "히스토리", href: "/gendesk/history", icon: History },
       ]
     },
     company: {
@@ -143,8 +153,8 @@ export default function DashboardLayout({ children }) {
       <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} bg-[#f8f8f8] border-r border-neutral-100 flex flex-col z-20 shrink-0 transition-all duration-300 ease-in-out relative ${isSwitcherOpen ? '' : 'overflow-hidden'}`}>
         <div className={`pt-6 ${isSidebarOpen ? 'px-6' : 'px-5'} flex-1 flex flex-col items-start overflow-y-auto overflow-x-hidden custom-scrollbar transition-all duration-300 ${isSwitcherOpen ? 'overflow-visible' : ''}`}>
           <div className={`${isSidebarOpen ? 'w-full' : 'w-10'} ml-[2px] mt-[2px] mb-8 transition-all duration-300`}>
-            <Link href="/gendesk/home" className={`text-2xl font-black italic tracking-tighter text-black block transition-all duration-300 ${isSidebarOpen ? '' : 'text-center scale-110'}`}>
-              G{isSidebarOpen && <span className="animate-in fade-in duration-300">ENABLE</span>}
+            <Link href="/gendesk/history" className={`text-2xl font-black italic tracking-tighter text-black block transition-all duration-300 ${isSidebarOpen ? '' : 'text-center scale-110'}`}>
+              GENABLE
             </Link>
           </div>
           
@@ -154,8 +164,8 @@ export default function DashboardLayout({ children }) {
                 className={`${isSidebarOpen ? 'w-full px-4 py-3' : 'w-10 h-10 px-0 py-0'} flex items-center justify-between rounded-2xl bg-white text-neutral-900 shadow-sm hover:border-neutral-300 transition-all border border-neutral-200 group`}
              >
                 <div className={`flex items-center ${isSidebarOpen ? 'gap-3' : 'justify-center'} overflow-hidden w-full`}>
-                   <div className="w-6 h-6 rounded-lg bg-neutral-100 flex items-center justify-center text-[10px] font-bold overflow-hidden text-neutral-400 group-hover:text-black transition-colors shrink-0">
-                     {activeMenu.title[0]}
+                   <div className="w-6 h-6 rounded-lg bg-neutral-100 flex items-center justify-center text-[10px] font-bold overflow-hidden text-black group-hover:text-black transition-colors shrink-0">
+                     {activeWorkspace === 'genable' ? 'L' : activeWorkspace === 'design' ? 'D' : activeMenu.title[0]}
                    </div>
                    {isSidebarOpen && (
                      <span className="font-bold text-[13px] truncate whitespace-nowrap">
@@ -176,23 +186,27 @@ export default function DashboardLayout({ children }) {
                      : 'fixed left-20 top-[102px] w-56 shadow-2xl border border-neutral-100'} 
                    mt-1 bg-white rounded-2xl z-50 p-1 animate-in zoom-in-95 duration-100 origin-top
                  `}>
-                    {Object.entries(menuConfig).map(([key, ws]) => (
-                       <button
-                          key={key}
-                          onClick={() => toggleWorkspace(key)}
-                          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-[13px] font-bold transition-all ${
-                            activeWorkspace === key ? "bg-neutral-100 text-black" : "text-neutral-400 hover:bg-neutral-50 hover:text-black"
-                          }`}
-                       >
-                          <div className="flex items-center gap-3">
-                             <div className={`w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-[8px] overflow-hidden ${activeWorkspace === key ? "bg-black text-white" : ""}`}>
-                                {ws.title[0]}
-                             </div>
-                             <span>{ws.title}</span>
-                          </div>
-                          {activeWorkspace === key && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
-                       </button>
-                    ))}
+                    {["genable", "design", "company"].map((key) => {
+                       const ws = menuConfig[key];
+                       if (!ws) return null;
+                       return (
+                        <button
+                           key={key}
+                           onClick={() => toggleWorkspace(key)}
+                           className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-[13px] font-bold transition-all ${
+                             activeWorkspace === key ? "bg-neutral-100 text-black" : "text-neutral-400 hover:bg-neutral-50 hover:text-black"
+                           }`}
+                        >
+                           <div className="flex items-center gap-3">
+                              <div className={`w-5 h-5 rounded bg-neutral-200/50 flex items-center justify-center text-[8px] font-bold overflow-hidden text-black`}>
+                                 {key === 'genable' ? 'L' : key === 'design' ? 'D' : ws.title[0]}
+                              </div>
+                              <span>{ws.title}</span>
+                           </div>
+                           {activeWorkspace === key && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
+                        </button>
+                       );
+                    })}
                  </div>
                </>
              )}
@@ -328,8 +342,8 @@ export default function DashboardLayout({ children }) {
             </Link>
             <Link href="/company/plan" className="flex items-center gap-2.5 px-3 py-1.5 bg-neutral-900 hover:bg-black text-white rounded-lg shadow-md shadow-black/10 transition-all active:scale-95 group">
                <CreditCard className="w-3.5 h-3.5 text-white/50 group-hover:text-white transition-colors" strokeWidth={2.5} />
-               <span className="text-[11px] font-black tracking-tight">{profile?.credits || 0}</span>
-               <span className="text-[9px] font-black text-white/40 uppercase tracking-tighter group-hover:text-white transition-colors">크레딧</span>
+               <span className="text-[11px] font-black tracking-tight">{(profile?.companies?.gen_balance || 0).toLocaleString()}</span>
+               <span className="text-[9px] font-black text-white/40 uppercase tracking-tighter group-hover:text-white transition-colors">Gen</span>
             </Link>
           </div>
         </header>

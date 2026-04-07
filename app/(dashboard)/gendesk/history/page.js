@@ -1,19 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Link2, Copy, History, Link as LinkIcon, Plus, Loader2 } from "lucide-react";
-import { getProjects, getSessions, createSession } from "@/lib/db";
+import { 
+  Copy, 
+  History, 
+  Loader2, 
+} from "lucide-react";
+import { getSessions, getProfile, getGendeskStats } from "@/lib/db";
 
-export default function HistoryPage() {
-  const [projects, setProjects] = useState([]);
+export default function UnifiedHistoryPage() {
   const [sessions, setSessions] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
-  const [guestId, setGuestId] = useState("GUEST_" + Math.floor(Math.random() * 9000 + 1000));
-  const [generatedLink, setGeneratedLink] = useState("");
-  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -21,212 +19,151 @@ export default function HistoryPage() {
 
   async function fetchData() {
     try {
-      const [projectsData, sessionsData] = await Promise.all([
-        getProjects(),
-        getSessions()
-      ]);
-      setProjects(projectsData || []);
+      // 1. Fetch Profile first to get company_id
+      const profileData = await getProfile();
+      
+      // 2. Fetch Sessions and Stats in parallel if company_id exists
+      const sessionsPromise = getSessions();
+      const statsPromise = profileData?.company_id ? getGendeskStats(profileData.company_id) : Promise.resolve(null);
+      
+      const [sessionsData, statsData] = await Promise.all([sessionsPromise, statsPromise]);
+      
       setSessions(sessionsData || []);
-      if (projectsData?.length > 0 && !selectedProjectId) {
-        setSelectedProjectId(projectsData[0].id);
-      }
+      setStats(statsData || null);
     } catch (err) {
-      console.error("Failed to fetch data:", err);
+      console.error("Failed to fetch integrated data in history page:", err);
     } finally {
       setLoading(false);
     }
   }
 
-  const handleGenerate = async () => {
-    if (!selectedProjectId) return;
-    setGenerating(true);
-    try {
-      const session = await createSession(selectedProjectId, guestId);
-      const url = `${window.location.origin}/session/${selectedProjectId}?id=${guestId}`;
-      setGeneratedLink(url);
-      fetchData(); // Refresh list
-    } catch (err) {
-      alert("링크 생성에 실패했습니다: " + err.message);
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(generatedLink);
-    alert("딥링크가 성공적으로 복사되었습니다!");
-  };
-
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-neutral-300" />
+      <div className="flex h-screen items-center justify-center bg-white">
+        <Loader2 className="w-10 h-10 animate-spin text-neutral-200" />
       </div>
     );
   }
 
+  // 상단 통계 카드 데이터 - 수익성 및 가치 중심으로 개편
+  const displayStats = [
+    { label: "누적 상담 세션", value: stats?.totalSessions || 0, unit: "건" },
+    { label: "플랫폼 서비스 활성도", value: stats?.avgDuration || 0, unit: "Ops" },
+    { label: "AI 생성 매출 (KRW)", value: stats?.totalGen || 0, unit: "₩" },
+    { label: "최근 7일 플랫폼 기여", value: stats?.trendCount || 0, unit: "건" },
+  ];
+
   return (
-    <div className="bg-white font-sans text-neutral-900 pb-20">
-      <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-40 pr-8 pl-0 py-4">
+    <div className="bg-white font-sans text-neutral-900 h-[calc(100vh-3rem-2rem)] flex flex-col overflow-hidden">
+      
+      {/* 1. 프리미엄 헤더 (고정) */}
+      <header className="shrink-0 border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-40 pr-8 pl-0 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-black italic tracking-tighter text-neutral-900">히스토리</h1>
+            <h1 className="text-xl font-black italic tracking-tighter text-neutral-900 uppercase">운영 히스토리</h1>
           </div>
-          <button 
-            onClick={() => setShowGenerateModal(true)}
-            className="btn-primary flex items-center gap-2 px-5 py-2.5 shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            신규 딥링크 발급
-          </button>
         </div>
       </header>
 
-      <main className="pr-8 pl-0 py-10 space-y-12">
-        {showGenerateModal && (
-        <div className="bg-white p-8 rounded-xl border border-neutral-200 shadow-xl mb-12 animate-in fade-in slide-in-from-top-4">
-          <div className="flex items-center justify-between mb-8 border-b border-neutral-100 pb-4">
-            <h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">세션 링크 생성 엔진</h2>
-            <button onClick={() => setShowGenerateModal(false)} className="text-[10px] font-black uppercase tracking-widest text-neutral-300 hover:text-black transition-colors">Close</button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div className="space-y-6">
-              <div>
-                <label className="block text-[11px] font-black text-neutral-400 uppercase tracking-widest mb-2">대상 시나리오 (프로젝트)</label>
-                <select 
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="w-full bg-neutral-50 border border-neutral-100 text-neutral-900 text-sm font-bold rounded-xl focus:bg-white focus:ring-1 focus:ring-black outline-none block p-4"
-                >
-                  {projects.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-black text-neutral-400 uppercase tracking-widest mb-2">고객 식별 메타데이터</label>
-                <input 
-                  type="text"
-                  value={guestId}
-                  onChange={(e) => setGuestId(e.target.value)}
-                  className="w-full bg-neutral-50 border border-neutral-100 text-neutral-900 text-sm font-bold rounded-xl focus:bg-white focus:ring-1 focus:ring-black outline-none block p-4"
-                  placeholder="GUEST_1234"
-                />
-              </div>
-              
-              <button 
-                onClick={handleGenerate}
-                disabled={generating || projects.length === 0}
-                className="w-full bg-black hover:bg-neutral-800 text-white font-black uppercase tracking-widest rounded-xl text-xs px-5 py-5 shadow-xl active:scale-95 transition-all disabled:opacity-30"
-              >
-                {generating ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Deploy Tracking Link"}
-              </button>
-            </div>
-
-            <div className="bg-neutral-50 rounded-2xl p-8 border border-neutral-100 flex flex-col justify-center gap-6">
-              {generatedLink ? (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                     <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded uppercase tracking-widest">Active Link</span>
-                     <Link2 className="w-4 h-4 text-neutral-200" />
-                  </div>
-                  <div className="flex bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                    <input 
-                      type="text" 
-                      readOnly 
-                      value={generatedLink} 
-                      className="w-full px-5 py-4 text-xs text-neutral-400 bg-transparent outline-none font-bold"
-                    />
-                    <button onClick={copyToClipboard} className="bg-neutral-50 px-5 border-l border-neutral-200 hover:bg-black hover:text-white text-neutral-400 transition-all">
-                      <Copy className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-neutral-400 font-bold opacity-60 leading-relaxed uppercase tracking-tighter">복사된 링크를 고객에게 전달하여 실시간 미러링 상담을 시작하세요.</p>
+      {/* 2. 스크롤 가능한 메인 컴텐츠 영역 - 전체 스크롤을 막기 위해 flex-col 및 overflow-hidden 사용 */}
+      <main className="flex-1 flex flex-col min-h-0 pr-8 pl-0 py-8 space-y-12">
+        
+        {/* 통계 카드 (고정) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 shrink-0">
+          {displayStats.map((stat, i) => (
+            <div key={i} className="card-premium h-full flex flex-col justify-end p-6 min-h-[110px]">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-neutral-300 uppercase tracking-widest mb-1">{stat.label}</span>
+                <div className="flex items-baseline gap-1.5 font-black italic tracking-tighter text-neutral-900">
+                  <span className="text-3xl">{Number(stat.value).toLocaleString()}</span>
+                  <span className="text-lg opacity-20 uppercase not-italic font-sans">{stat.unit}</span>
                 </div>
-              ) : (
-                <div className="text-center text-neutral-300 flex flex-col items-center gap-4">
-                  <div className="p-4 bg-white rounded-full shadow-sm">
-                     <LinkIcon className="w-8 h-8 opacity-20" />
-                  </div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em] leading-relaxed">Select parameters to<br/>generate dynamic url</p>
-                </div>
-              )}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
-        )}
 
-        {/* History Table */}
-        <div className="table-container-premium overflow-hidden">
-          <table className="table-premium">
-            <thead>
-              <tr>
-                <th className="md:w-32">Session ID</th>
-                <th>Project Context</th>
-                <th>Client ID</th>
-                <th>Timestamp</th>
-                <th>Status</th>
-                <th className="md:text-right">액션</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sessions.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="py-20 text-center font-bold text-neutral-300 text-xs uppercase tracking-widest">No active sessions found</td>
-                </tr>
-              ) : (
-                sessions.map((log) => (
-                  <tr key={log.id} className="group">
-                  <td className="font-mono text-[10px] text-neutral-400">{log.id.slice(0, 8)}</td>
-                    <td>
-                       <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded bg-neutral-100 flex items-center justify-center text-[10px] font-bold text-neutral-400 group-hover:bg-black group-hover:text-white transition-all">
-                             {log.projects?.name?.[0]}
-                          </div>
-                          <span className="font-bold text-neutral-900">{log.projects?.name}</span>
-                       </div>
-                    </td>
-                    <td>
-                       <span className="bg-neutral-100 text-neutral-600 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-tight">{log.guest_id}</span>
-                    </td>
-                    <td className="text-neutral-400 text-[12px] font-medium">
-                       {new Date(log.created_at).toLocaleString('ko-KR')}
-                    </td>
-                    <td>
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                        log.status === "active" ? "bg-green-50 text-green-600" : "bg-neutral-100 text-neutral-400"
-                      }`}>
-                        {log.status === "active" && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>}
-                        {log.status === "active" ? "LIVE" : log.status}
-                      </span>
-                    </td>
-                    <td className="md:text-right">
-                      <div className="flex items-center md:justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => {
-                            const url = `${window.location.origin}/session/${log.project_id}?id=${log.guest_id}`;
-                            navigator.clipboard.writeText(url);
-                            alert("세션 링크가 복사되었습니다.");
-                          }}
-                          className="text-neutral-300 hover:text-black transition-colors"
-                          title="Copy Link"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                        <button className="text-neutral-300 hover:text-black transition-colors" title="View Details">
-                          <History className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {/* 3. 통합 운영 히스토리 테이블 (가변 및 개별 스크롤) */}
+        <section className="flex-1 min-h-0 flex flex-col space-y-6">
+           <div className="shrink-0 flex items-center justify-between border-b border-neutral-50 pb-4">
+              <div className="space-y-1">
+                 <h2 className="text-xl font-black italic tracking-tighter text-neutral-900 flex items-center gap-2">
+                    <History className="w-5 h-5" />
+                    상담 리스트
+                 </h2>
+                 <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Real-time Sessions & Mirroring Integrity</p>
+              </div>
+           </div>
+
+           {/* 테이블 자체 스크롤 영역 */}
+           <div className="flex-1 overflow-auto table-container-premium !rounded-[2rem] border-none shadow-none !bg-transparent custom-scrollbar">
+              <table className="table-premium relative">
+                 <thead className="sticky top-0 z-20 bg-white">
+                    <tr>
+                       <th>Session ID</th>
+                       <th>프로젝트</th>
+                       <th>고객 ID</th>
+                       <th>상담 시작일시</th>
+                       <th className="text-center">상태</th>
+                       <th className="text-right">액션</th>
+                    </tr>
+                 </thead>
+                 <tbody>
+                    {sessions.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="py-20 text-center text-neutral-200">
+                           <p className="text-[10px] font-black uppercase tracking-[0.4em]">진행된 상담 내역이 없습니다.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      sessions.map((log) => (
+                        <tr key={log.id}>
+                           <td className="font-mono text-[10px] text-neutral-300">{log.id.slice(0, 8)}</td>
+                           <td>
+                              <span className="font-bold text-neutral-900">{log.projects?.name}</span>
+                           </td>
+                           <td>
+                              <span className="bg-neutral-50 border border-neutral-100 text-neutral-400 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-tight">{log.guest_id}</span>
+                           </td>
+                           <td className="text-neutral-400 text-[12px] font-medium">
+                              {new Date(log.created_at).toLocaleString('ko-KR')}
+                           </td>
+                           <td className="text-center">
+                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                               log.status === "active" ? "bg-emerald-50 text-emerald-500" : "bg-neutral-50 text-neutral-300"
+                             }`}>
+                               {log.status === "active" && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>}
+                               {log.status === "active" ? "LIVE" : "CLOSED"}
+                             </span>
+                           </td>
+                           <td className="text-right">
+                             <div className="flex items-center justify-end gap-3 opacity-20 hover:opacity-100 transition-opacity">
+                               <button 
+                                 onClick={() => {
+                                   const url = `${window.location.origin}/session/${log.project_id}?id=${log.guest_id}`;
+                                   navigator.clipboard.writeText(url);
+                                   alert("상담 링크가 복약되었습니다.");
+                                 }}
+                                 className="text-neutral-300 hover:text-black transition-colors"
+                                 title="Copy Link"
+                               >
+                                 <Copy className="w-4 h-4" />
+                               </button>
+                               <button className="text-neutral-300 hover:text-black transition-colors" title="View Details">
+                                 <History className="w-4 h-4" />
+                               </button>
+                             </div>
+                           </td>
+                        </tr>
+                      ))
+                    )}
+                 </tbody>
+              </table>
+           </div>
+        </section>
+
       </main>
+
     </div>
   );
 }

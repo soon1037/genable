@@ -19,8 +19,8 @@ export async function POST(req) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
-    // Official Nano Banana 2 (Gemini 3.1 Flash Image) - REST EndPoint
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`;
+    // Official Nano Banana 2 (Gemini 2.0 Flash Image) - REST EndPoint
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
     
     // Using organized prompt template from lib/prompts
     const designPrompt = NANO_BANANA_PROMPTS.getDesignPrompt(prompt, type, aspectRatio);
@@ -70,35 +70,49 @@ export async function POST(req) {
 
     const resultData = await response.json();
     
-    // --- AI Usage Logging ---
+    // --- AI Usage Logging & Revenue Tracking ---
     const usage = resultData.usageMetadata || resultData.usage_metadata;
     if (usage) {
       const inputTokens = usage.promptTokenCount || usage.prompt_token_count || 0;
       const outputTokens = usage.candidatesTokenCount || usage.candidates_token_count || 0;
       
-      // GEMINI 3.1 FLASH IMAGE PRICING (USD/1M Tokens)
+      // DYNAMIC PRICING: Fetch latest rate from central service_pricing table
+      const { data: pricingRecord } = await supabaseAdmin
+        .from('service_pricing')
+        .select('gen_per_unit')
+        .eq('service_name', 'design')
+        .single();
+
+      // If DB record exists, use that value; otherwise fallback to 500 as a safety measure
+      const RETAIL_PRICE_PER_IMAGE = pricingRecord?.gen_per_unit || 500; 
+      
+      // Internal Cost Tracking (for auditing real expenses vs revenue)
       const RATE_INPUT = 0.25;
-      const RATE_OUTPUT = 60.00; // Image Generation Rate
+      const RATE_OUTPUT = 60.00;
       const KRW_USD_RATE = 1350;
+      const rawCostUsd = (inputTokens * (RATE_INPUT / 1000000)) + (outputTokens * (RATE_OUTPUT / 1000000));
+      const rawCostKrw = Math.round(rawCostUsd * KRW_USD_RATE);
 
-      const costUsd = (inputTokens * (RATE_INPUT / 1000000)) + (outputTokens * (RATE_OUTPUT / 1000000));
-      const costKrw = Math.round(costUsd * KRW_USD_RATE);
-
-      // Async log (non-blocking)
       const { data: { session } } = await supabaseAdmin.auth.getSession();
       
       try {
         await supabaseAdmin.from('usage_logs').insert([{
           service_type: 'design',
-          model_name: 'gemini-3.1-flash-image-preview',
+          model_name: 'gemini-2.0-flash-exp',
           input_tokens: inputTokens,
           output_tokens: outputTokens,
-          cost_usd: costUsd,
-          cost_krw: costKrw,
+          cost_usd: rawCostUsd, // Internal raw cost
+          cost_krw: RETAIL_PRICE_PER_IMAGE, // Dynamic Revenue-based value tracked as cost_krw
           user_id: session?.user?.id || null,
-          metadata: { prompt: prompt, type: type, aspectRatio: aspectRatio }
+          metadata: { 
+            prompt: prompt, 
+            type: type, 
+            aspectRatio: aspectRatio,
+            raw_cost_krw: rawCostKrw,
+            pricing_source: pricingRecord ? 'db' : 'fallback'
+          }
         }]);
-        console.log(`[USAGE LOG] Logged Design cost: ${costKrw} KRW`);
+        console.log(`[USAGE LOG] Revenue Recorded: ${RETAIL_PRICE_PER_IMAGE} KRW (Source: ${pricingRecord ? 'DB' : 'Hardcoded Fallback'})`);
       } catch (logErr) {
         console.error("[USAGE LOG] Database logging failed:", logErr);
       }

@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
   ChevronLeft, Settings, Edit, Link as LinkIcon, 
   Copy, Check, Clock, User, Globe, Activity,
   CheckCircle2, XCircle, AlertCircle, Loader2, Plus, Info,
-  ArrowDownRight, MessageSquare
+  ArrowDownRight, MessageSquare, Download
 } from "lucide-react";
 import { getProjectById, getProjectSessionDetails, createOneTimeSession, updateProject } from "@/lib/db";
 
@@ -19,20 +19,28 @@ const PROJECT_TYPES = [
   { id: 'test', name: '테스트' },
 ];
 
+const PAGE_SIZE = 50;
+
 export default function ProjectHistoryPage() {
   const { id } = useParams();
   const router = useRouter();
   const [project, setProject] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  
   const [copying, setCopying] = useState(null);
   const [selectedSess, setSelectedSess] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [drawerMounted, setDrawerMounted] = useState(false);
+  
+  const observerTarget = useRef(null);
 
   useEffect(() => {
-    if (id) fetchData();
+    if (id) initialLoad();
   }, [id]);
 
   useEffect(() => {
@@ -43,19 +51,52 @@ export default function ProjectHistoryPage() {
     }
   }, [isDrawerOpen, isClosing]);
 
-  async function fetchData() {
+  // 무한 스크롤 감지 센서 설정
+  const handleObserver = useCallback((entries) => {
+    const [target] = entries;
+    if (target.isIntersecting && hasMore && !loadingMore && !loading) {
+      loadMoreSessions();
+    }
+  }, [hasMore, loadingMore, loading]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(handleObserver, { threshold: 0.1 });
+    if (observerTarget.current) observer.observe(observerTarget.current);
+    return () => { if (observerTarget.current) observer.unobserve(observerTarget.current); };
+  }, [handleObserver]);
+
+  async function initialLoad() {
     setLoading(true);
+    setPage(0);
+    setHasMore(true);
     try {
       const [projData, sessData] = await Promise.all([
         getProjectById(id),
-        getProjectSessionDetails(id)
+        getProjectSessionDetails(id, PAGE_SIZE, 0)
       ]);
       setProject(projData);
       setSessions(sessData || []);
+      if (!sessData || sessData.length < PAGE_SIZE) setHasMore(false);
     } catch (err) {
       console.error("Failed to fetch history data:", err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadMoreSessions() {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    try {
+      const moreData = await getProjectSessionDetails(id, PAGE_SIZE, nextPage * PAGE_SIZE);
+      if (!moreData || moreData.length < PAGE_SIZE) setHasMore(false);
+      setSessions(prev => [...prev, ...(moreData || [])]);
+      setPage(nextPage);
+    } catch (err) {
+      console.error("Failed to load more sessions:", err);
+    } finally {
+      setLoadingMore(false);
     }
   }
 
@@ -68,21 +109,75 @@ export default function ProjectHistoryPage() {
   const renderResultData = (data) => {
     if (!data) return "-";
     if (typeof data === 'object') {
-       // Check for common keys
        const val = data.text || data.value || data.number || data.data || data.result;
        if (val !== undefined && val !== null) return String(val);
-       
-       // If no common keys, try to find the only key in the object
        const keys = Object.keys(data);
        if (keys.length === 1) {
           const firstVal = data[keys[0]];
           if (typeof firstVal !== 'object') return String(firstVal);
        }
-       
-       // Fallback to JSON stringify for complex objects, but keep it clean
-       return JSON.stringify(data);
+       return JSON.stringify(data).replace(/"/g, '""');
     }
-    return String(data);
+    return String(data).replace(/"/g, '""');
+  };
+
+  // 📥 CSV 다운로드 로직 (전체 페칭 대응)
+  const handleDownloadCSV = async () => {
+    try {
+      setLoadingMore(true); // 시각적 피드백
+      // 🎯 CSV 내보내기를 위해 전체 히스토리 다시 한 번 긁어오기 (No Limit)
+      const allSessions = await getProjectSessionDetails(id, null);
+      if (!allSessions || allSessions.length === 0) return;
+
+      const staticHeaders = ["세션 구분", "ID/IP", "IP 주소", "접속 시각", "종료 시각", "소요 시간(분)", "상태"];
+      const missionHeaders = (project.missions?.flatMap(stage => stage.missions.map(m => m.title)) || []);
+      const csvHeader = [...staticHeaders, ...missionHeaders].join(",");
+
+      const csvRows = allSessions.map(sess => {
+        const type = (sess.id === sess.guest_id || sess.guest_id?.startsWith('Secure-')) ? '1회용' : '상시';
+        const startTime = new Date(sess.created_at).toLocaleString('ko-KR');
+        const endTime = sess.ended_at ? new Date(sess.ended_at).toLocaleString('ko-KR') : "-";
+        const duration = sess.ended_at ? Math.round((new Date(sess.ended_at) - new Date(sess.created_at)) / 1000 / 60) : "-";
+        const statusMap = { 'pending': '대기중', 'active': '진행중', 'completed': '완료' };
+        
+        const staticPart = [
+          type, 
+          `"${sess.guest_id}"`, 
+          `"${sess.ip_address || '-'}"`, 
+          `"${startTime}"`, 
+          `"${endTime}"`, 
+          duration, 
+          statusMap[sess.status] || sess.status
+        ];
+
+        const missionPart = (project.missions?.flatMap(stage => 
+          stage.missions.map(m => {
+            const res = sess.mission_results?.find(r => 
+              String(r.mission_id) === String(m.id) || 
+              r.mission_id?.toLowerCase() === m.title?.toLowerCase()
+            );
+            if (!res) return "-";
+            return m.type === 'collect' ? `"${renderResultData(res.result_data)}"` : (res.status === 'success' ? '성공' : '실패');
+          })
+        ) || []);
+
+        return [...staticPart, ...missionPart].join(",");
+      });
+
+      const csvContent = "\uFEFF" + [csvHeader, ...csvRows].join("\n");
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `genable_history_${project.name}_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert("CSV 생성에 실패했습니다.");
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
   const handleStatusChange = async (newValue) => {
@@ -106,7 +201,7 @@ export default function ProjectHistoryPage() {
       if (!sess) throw new Error("No session created");
       const url = `${window.location.origin}/session/${id}?id=${sess.id}`;
       handleCopy(url, 'one-time');
-      fetchData(); // Refresh list
+      initialLoad(); // Refresh
     } catch (err) {
       console.error("1-time link error details:", err);
       const msg = err?.message || JSON.stringify(err);
@@ -141,7 +236,6 @@ export default function ProjectHistoryPage() {
   
   const permanentUrl = `${window.location.origin}/session/${id}`;
 
-  // Flatten all missions from all stages for column mapping
   const allMissions = project.missions?.flatMap(stage => 
     stage.missions.map(m => ({
       id: m.id,
@@ -172,9 +266,17 @@ export default function ProjectHistoryPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+             <button 
+                onClick={handleDownloadCSV}
+                className="btn-secondary flex items-center gap-2 py-2.5 px-6"
+                disabled={loadingMore}
+             >
+                {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                CSV 다운로드
+             </button>
              <Link href={`/gendesk/project/${id}/settings`} className="btn-primary flex items-center gap-2 py-2.5 px-6 shadow-xl shadow-black/5">
                 <Settings className="w-4 h-4" />
-                수정하기
+                수정이동
              </Link>
           </div>
         </div>
@@ -388,12 +490,27 @@ export default function ProjectHistoryPage() {
                      {sessions.length === 0 && (
                        <tr>
                          <td colSpan={5 + allMissions.length} className="py-20 text-center text-neutral-300 font-bold text-[12px] italic">
-                            아직 기록된 세션 히스토리가 없습니다.
+                            아직 기록된 세션 히스토리 가 없습니다.
                          </td>
                        </tr>
                      )}
                   </tbody>
                </table>
+               
+               {/* 🎯 Infinite Scroll Sentinel & Loading Indicator */}
+               <div ref={observerTarget} className="h-10 w-full flex items-center justify-center mt-4">
+                  {loadingMore && hasMore && (
+                    <div className="flex items-center gap-2 text-neutral-400 text-[11px] font-bold animate-pulse">
+                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                       추가 히스토리 불러오는 중...
+                    </div>
+                  )}
+                  {!hasMore && sessions.length > 0 && (
+                    <div className="text-neutral-200 text-[10px] font-black uppercase tracking-widest">
+                       모든 히스토리를 불러왔습니다
+                    </div>
+                  )}
+               </div>
             </div>
          </section>
 

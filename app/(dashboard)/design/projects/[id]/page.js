@@ -240,7 +240,7 @@ export default function CardNewsEditor() {
   const isLastPage = currentPageIndex === project.data.pages.length - 1;
 
   return (
-    <div className="flex-1 flex flex-col bg-white font-sans overflow-hidden min-h-[calc(100vh-48px)] -m-8 relative">
+    <div className="flex-1 flex flex-col bg-white font-sans overflow-hidden min-h-[calc(100vh-48px)] -mx-8 -mb-8 relative">
       
       {/* Zero-Flash Image Preloader */}
       <div className="hidden opacity-0 pointer-events-none absolute h-0 w-0">

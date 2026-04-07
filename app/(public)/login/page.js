@@ -27,7 +27,7 @@ export default function LoginPage() {
       if (authError) throw authError;
 
       // SUCCESS: Redirect to dashboard
-      router.push("/gendesk/home");
+      router.push("/gendesk/project");
     } catch (err) {
       setError(err.message);
     } finally {
