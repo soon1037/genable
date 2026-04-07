@@ -34,15 +34,17 @@ export default function CompanyHomePage() {
   const company = profile?.companies;
 
   return (
-    <div className="animate-in fade-in duration-500 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-bold tracking-tight text-neutral-900">기업 개요</h3>
+    <div className="bg-white font-sans text-neutral-900 pb-20">
+      <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-40 pr-8 pl-0 py-4">
+        <div className="flex items-center justify-between min-h-[44px]">
+          <div>
+            <h1 className="text-xl font-black italic tracking-tighter text-neutral-900">기업 개요</h1>
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Summary Cards */}
+      <main className="pr-8 pl-0 py-10 space-y-12">
+        {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card-premium">
           <div className="flex items-center justify-between mb-4">
@@ -131,6 +133,7 @@ export default function CompanyHomePage() {
            기업 정보 수정
         </Link>
       </div>
+      </main>
     </div>
   );
 }

@@ -11,14 +11,17 @@ export default function StatisticsPage() {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-bold tracking-tight text-neutral-900">홈</h3>
+    <div className="bg-white font-sans text-neutral-900 pb-20">
+      <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-40 pr-8 pl-0 py-4">
+        <div className="flex items-center justify-between min-h-[44px]">
+          <div>
+            <h1 className="text-xl font-black italic tracking-tighter text-neutral-900">홈</h1>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <main className="pr-8 pl-0 py-10 space-y-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => {
           const Icon = stat.icon;
           return (
@@ -73,6 +76,7 @@ export default function StatisticsPage() {
            </div>
         </div>
       </div>
+      </main>
     </div>
   );
 }

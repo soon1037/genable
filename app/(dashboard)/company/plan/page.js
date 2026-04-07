@@ -18,18 +18,21 @@ export default function PlanSettingsPage() {
   if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 className="animate-spin text-neutral-200" /></div>;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
-        <div>
-           <h3 className="text-2xl font-bold tracking-tight text-neutral-900">플랜 설정</h3>
+    <div className="bg-white font-sans text-neutral-900 pb-20">
+      <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-40 pr-8 pl-0 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-black italic tracking-tighter text-neutral-900">플랜 설정</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Current Status</span>
+            <span className="bg-green-50 text-green-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">Active Subscription</span>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-           <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Current Status</span>
-           <span className="bg-green-50 text-green-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">Active Subscription</span>
-        </div>
-      </div>
+      </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <main className="pr-8 pl-0 py-10 space-y-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="bg-neutral-900 border border-neutral-900 rounded-xl p-10 text-white shadow-xl flex flex-col justify-between group hover:scale-[1.01] transition-all">
            <div>
               <div className="flex items-center justify-between mb-10 pb-6 border-b border-white/10 uppercase font-black tracking-widest text-[11px]">
@@ -89,6 +92,7 @@ export default function PlanSettingsPage() {
            </div>
         </div>
       </div>
+      </main>
     </div>
   );
 }

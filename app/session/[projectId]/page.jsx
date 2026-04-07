@@ -29,6 +29,7 @@ function SessionContent() {
   });
   const [clientIp, setClientIp] = useState("");
   const [isUrlDisabled, setIsUrlDisabled] = useState(false);
+  const [isExpired, setIsExpired] = useState(false);
 
   // Fetch Client IP
   useEffect(() => {
@@ -90,9 +91,15 @@ function SessionContent() {
     if (sessionId && conversation.length > 0) {
       const syncTranscript = async () => {
         try {
-          await updateSession(sessionId, { transcript: conversation });
+          console.log("[DB SYNC] Attempting transcript sync for session:", sessionId);
+          const result = await updateSession(sessionId, { transcript: conversation });
+          if (result) {
+            console.log("[DB SYNC] Transcript successfully synced. Rows:", conversation.length);
+          } else {
+            console.warn("[DB SYNC] Sync returned no data. Check Supabase RLS policies for sessions update.");
+          }
         } catch (err) {
-          console.error("Failed to sync transcript:", err);
+          console.error("[DB SYNC] Critical sync failure:", err);
         }
       };
       syncTranscript();
@@ -106,13 +113,29 @@ function SessionContent() {
       try {
         await updateSession(sessionId, { 
           ended_at: new Date().toISOString(),
-          status: 'completed'
+          status: 'completed',
+          transcript: conversation // 최종 대화 내역 확실히 포함
         });
+        console.log("[SESSION] Successfully marked as completed with final transcript.");
       } catch (err) {
-        console.error("Failed to update end session:", err);
+        console.error("Failed to end session in DB:", err);
       }
     }
   };
+
+  // --- TAB CLOSE FALLBACK (Beacon) ---
+  useEffect(() => {
+    const handleTabClose = () => {
+      if (sessionId && !isEnded) {
+        // navigator.sendBeacon guarantees request completion even after tab close
+        const blob = new Blob([JSON.stringify({ sessionId })], { type: 'application/json' });
+        navigator.sendBeacon('/api/session/terminate', blob);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleTabClose);
+    return () => window.removeEventListener('beforeunload', handleTabClose);
+  }, [sessionId, isEnded]);
 
   async function initSession() {
     setLoading(true);
@@ -126,6 +149,13 @@ function SessionContent() {
       if (guestId) {
         const { data: existingSess } = await supabase.from('sessions').select('*').eq('id', guestId).maybeSingle();
         if (existingSess) {
+          // 1-time link must be pending to use OR can be reused ONLY if not completed AND not ended
+          if (existingSess.status === 'completed' || existingSess.ended_at) {
+             setIsExpired(true);
+             setLoading(false);
+             return;
+          }
+
           if (existingSess.status === 'pending') {
             // First time using this 1-time link!
             sess = await updateSession(guestId, { 
@@ -134,6 +164,7 @@ function SessionContent() {
               guest_id: userIdInput || 'Guest' 
             });
           } else {
+            // Already active but not completed - allow refresh/re-entry
             sess = existingSess;
           }
         }
@@ -167,7 +198,7 @@ function SessionContent() {
         setLogs(existingLogs.map(l => l.content));
       }
     } catch (err) {
-      console.error(err);
+      console.error("[SESSION INIT] Critical error:", err.message || err, err);
     } finally {
       setLoading(false);
     }

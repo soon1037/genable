@@ -70,6 +70,40 @@ export async function POST(req) {
 
     const resultData = await response.json();
     
+    // --- AI Usage Logging ---
+    const usage = resultData.usageMetadata || resultData.usage_metadata;
+    if (usage) {
+      const inputTokens = usage.promptTokenCount || usage.prompt_token_count || 0;
+      const outputTokens = usage.candidatesTokenCount || usage.candidates_token_count || 0;
+      
+      // GEMINI 3.1 FLASH IMAGE PRICING (USD/1M Tokens)
+      const RATE_INPUT = 0.25;
+      const RATE_OUTPUT = 60.00; // Image Generation Rate
+      const KRW_USD_RATE = 1350;
+
+      const costUsd = (inputTokens * (RATE_INPUT / 1000000)) + (outputTokens * (RATE_OUTPUT / 1000000));
+      const costKrw = Math.round(costUsd * KRW_USD_RATE);
+
+      // Async log (non-blocking)
+      const { data: { session } } = await supabaseAdmin.auth.getSession();
+      
+      try {
+        await supabaseAdmin.from('usage_logs').insert([{
+          service_type: 'design',
+          model_name: 'gemini-3.1-flash-image-preview',
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          cost_usd: costUsd,
+          cost_krw: costKrw,
+          user_id: session?.user?.id || null,
+          metadata: { prompt: prompt, type: type, aspectRatio: aspectRatio }
+        }]);
+        console.log(`[USAGE LOG] Logged Design cost: ${costKrw} KRW`);
+      } catch (logErr) {
+        console.error("[USAGE LOG] Database logging failed:", logErr);
+      }
+    }
+
     // Handling robust parsing for both inlineData and inline_data
     const firstCandidate = resultData.candidates?.[0];
     const imagePart = firstCandidate?.content?.parts?.find(p => p.inlineData || p.inline_data);

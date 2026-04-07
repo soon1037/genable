@@ -187,20 +187,23 @@ export default function AdminUsersPage() {
 
   return (
     <>
-      <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="bg-white font-sans text-neutral-900 pb-20">
+      <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-40 pr-8 pl-0 py-4">
         <div className="flex items-center justify-between">
           <div>
-          <h3 className="text-2xl font-bold tracking-tight text-neutral-900">사용자 관리</h3>
+            <h1 className="text-xl font-black italic tracking-tighter text-neutral-900">사용자 관리</h1>
+          </div>
+          <button 
+            onClick={() => { resetForm(); setEditingUserId(null); setIsInviteOpen(true); }}
+            className="btn-primary flex items-center gap-2 px-5 py-2.5"
+          >
+            <Plus className="w-4 h-4" />
+            신규 팀원 초대
+          </button>
         </div>
-        <button 
-          onClick={() => { resetForm(); setEditingUserId(null); setIsInviteOpen(true); }}
-          className="btn-primary flex items-center gap-2 px-5 py-2.5"
-        >
-          <Plus className="w-4 h-4" />
-          신규 팀원 초대
-        </button>
-        </div>
+      </header>
 
+      <main className="pr-8 pl-0 py-10 space-y-12">
         {/* Users Table */}
         <div className="table-container-premium">
           <div className="overflow-x-auto">
@@ -258,7 +261,7 @@ export default function AdminUsersPage() {
             </table>
           </div>
         </div>
-      </div>
+      </main>
 
       {/* Invite/Edit Drawer Overlay - Global Postioning */}
       {isInviteOpen && (
@@ -325,6 +328,7 @@ export default function AdminUsersPage() {
           </div>
         </div>
       )}
+    </div>
     </>
   );
 }

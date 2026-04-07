@@ -69,22 +69,25 @@ export default function CompanySettingsPage() {
   );
 
   return (
-    <div className="animate-in fade-in duration-500 pb-20 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-bold tracking-tight text-neutral-900">기업 설정</h3>
+    <div className="bg-white font-sans text-neutral-900 pb-20">
+      <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-40 pr-8 pl-0 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-black italic tracking-tighter text-neutral-900">기업 설정</h1>
+          </div>
+          <button 
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-primary px-5 py-2.5"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            변경사항 저장
+          </button>
         </div>
-        <button 
-          onClick={handleSave}
-          disabled={saving}
-          className="btn-primary px-5 py-2.5"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          변경사항 저장
-        </button>
-      </div>
+      </header>
 
-      <form onSubmit={handleSave} className="space-y-6 w-full">
+      <main className="pr-8 pl-0 py-10 space-y-12">
+        <form onSubmit={handleSave} className="space-y-6 w-full">
         {/* Business Info Section */}
         {/* Business Info Section */}
         <div className="card-premium">
@@ -163,7 +166,8 @@ export default function CompanySettingsPage() {
             />
           </div>
         </div>
-      </form>
+        </form>
+      </main>
     </div>
   );
 }

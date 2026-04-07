@@ -66,21 +66,24 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-bold tracking-tight text-neutral-900">히스토리</h3>
+    <div className="bg-white font-sans text-neutral-900 pb-20">
+      <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-40 pr-8 pl-0 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-black italic tracking-tighter text-neutral-900">히스토리</h1>
+          </div>
+          <button 
+            onClick={() => setShowGenerateModal(true)}
+            className="btn-primary flex items-center gap-2 px-5 py-2.5 shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            신규 딥링크 발급
+          </button>
         </div>
-        <button 
-          onClick={() => setShowGenerateModal(true)}
-          className="btn-primary flex items-center gap-2 px-5 py-2.5 shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          신규 딥링크 발급
-        </button>
-      </div>
+      </header>
 
-      {showGenerateModal && (
+      <main className="pr-8 pl-0 py-10 space-y-12">
+        {showGenerateModal && (
         <div className="bg-white p-8 rounded-xl border border-neutral-200 shadow-xl mb-12 animate-in fade-in slide-in-from-top-4">
           <div className="flex items-center justify-between mb-8 border-b border-neutral-100 pb-4">
             <h2 className="text-sm font-black uppercase tracking-widest text-neutral-900">세션 링크 생성 엔진</h2>
@@ -153,76 +156,77 @@ export default function HistoryPage() {
             </div>
           </div>
         </div>
-      )}
+        )}
 
-      {/* History Table */}
-      <div className="table-container-premium overflow-hidden">
-        <table className="table-premium">
-          <thead>
-            <tr>
-              <th className="md:w-32">Session ID</th>
-              <th>Project Context</th>
-              <th>Client ID</th>
-              <th>Timestamp</th>
-              <th>Status</th>
-              <th className="md:text-right">액션</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sessions.length === 0 ? (
+        {/* History Table */}
+        <div className="table-container-premium overflow-hidden">
+          <table className="table-premium">
+            <thead>
               <tr>
-                <td colSpan="5" className="py-20 text-center font-bold text-neutral-300 text-xs uppercase tracking-widest">No active sessions found</td>
+                <th className="md:w-32">Session ID</th>
+                <th>Project Context</th>
+                <th>Client ID</th>
+                <th>Timestamp</th>
+                <th>Status</th>
+                <th className="md:text-right">액션</th>
               </tr>
-            ) : (
-              sessions.map((log) => (
-                <tr key={log.id} className="group">
-                <td className="font-mono text-[10px] text-neutral-400">{log.id.slice(0, 8)}</td>
-                  <td>
-                     <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded bg-neutral-100 flex items-center justify-center text-[10px] font-bold text-neutral-400 group-hover:bg-black group-hover:text-white transition-all">
-                           {log.projects?.name?.[0]}
-                        </div>
-                        <span className="font-bold text-neutral-900">{log.projects?.name}</span>
-                     </div>
-                  </td>
-                  <td>
-                     <span className="bg-neutral-100 text-neutral-600 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-tight">{log.guest_id}</span>
-                  </td>
-                  <td className="text-neutral-400 text-[12px] font-medium">
-                     {new Date(log.created_at).toLocaleString('ko-KR')}
-                  </td>
-                  <td>
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      log.status === "active" ? "bg-green-50 text-green-600" : "bg-neutral-100 text-neutral-400"
-                    }`}>
-                      {log.status === "active" && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>}
-                      {log.status === "active" ? "LIVE" : log.status}
-                    </span>
-                  </td>
-                  <td className="md:text-right">
-                    <div className="flex items-center md:justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => {
-                          const url = `${window.location.origin}/session/${log.project_id}?id=${log.guest_id}`;
-                          navigator.clipboard.writeText(url);
-                          alert("세션 링크가 복사되었습니다.");
-                        }}
-                        className="text-neutral-300 hover:text-black transition-colors"
-                        title="Copy Link"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                      <button className="text-neutral-300 hover:text-black transition-colors" title="View Details">
-                        <History className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+            </thead>
+            <tbody>
+              {sessions.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="py-20 text-center font-bold text-neutral-300 text-xs uppercase tracking-widest">No active sessions found</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : (
+                sessions.map((log) => (
+                  <tr key={log.id} className="group">
+                  <td className="font-mono text-[10px] text-neutral-400">{log.id.slice(0, 8)}</td>
+                    <td>
+                       <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded bg-neutral-100 flex items-center justify-center text-[10px] font-bold text-neutral-400 group-hover:bg-black group-hover:text-white transition-all">
+                             {log.projects?.name?.[0]}
+                          </div>
+                          <span className="font-bold text-neutral-900">{log.projects?.name}</span>
+                       </div>
+                    </td>
+                    <td>
+                       <span className="bg-neutral-100 text-neutral-600 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-tight">{log.guest_id}</span>
+                    </td>
+                    <td className="text-neutral-400 text-[12px] font-medium">
+                       {new Date(log.created_at).toLocaleString('ko-KR')}
+                    </td>
+                    <td>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        log.status === "active" ? "bg-green-50 text-green-600" : "bg-neutral-100 text-neutral-400"
+                      }`}>
+                        {log.status === "active" && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>}
+                        {log.status === "active" ? "LIVE" : log.status}
+                      </span>
+                    </td>
+                    <td className="md:text-right">
+                      <div className="flex items-center md:justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => {
+                            const url = `${window.location.origin}/session/${log.project_id}?id=${log.guest_id}`;
+                            navigator.clipboard.writeText(url);
+                            alert("세션 링크가 복사되었습니다.");
+                          }}
+                          className="text-neutral-300 hover:text-black transition-colors"
+                          title="Copy Link"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                        <button className="text-neutral-300 hover:text-black transition-colors" title="View Details">
+                          <History className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </main>
     </div>
   );
 }

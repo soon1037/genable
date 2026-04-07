@@ -87,7 +87,7 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="relative">
+    <div className="bg-white font-sans text-neutral-900 pb-20">
       {/* Entrance Modal */}
       {showModal && (
         <div 
@@ -177,20 +177,23 @@ export default function ProjectsPage() {
       )}
 
       {/* Page Content */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h3 className="text-2xl font-bold tracking-tight text-neutral-900">프로젝트</h3>
+      <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-40 pr-8 pl-0 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-black italic tracking-tighter text-neutral-900">프로젝트</h1>
+          </div>
+          <button 
+            onClick={() => setShowModal(true)}
+            className="btn-primary flex items-center gap-2 px-5 py-2.5"
+          >
+            <PlusCircle className="w-4 h-4" />
+            새 프로젝트 생성
+          </button>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center gap-2 px-5 py-2.5"
-        >
-          <PlusCircle className="w-4 h-4" />
-          새 프로젝트 생성
-        </button>
-      </div>
+      </header>
 
-      {projects.length === 0 ? (
+      <main className="pr-8 pl-0 py-10 space-y-12">
+        {projects.length === 0 ? (
         <div className="bg-white border border-neutral-200 rounded-xl p-20 text-center shadow-sm">
            <div className="w-16 h-16 bg-neutral-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-neutral-100 text-neutral-300">
               <Rocket className="w-8 h-8" />
@@ -209,15 +212,18 @@ export default function ProjectsPage() {
            <table className="table-premium">
             <thead>
               <tr>
-                 <th>프로젝트 제목</th>
+                 <th className="w-[400px]">프로젝트 제목</th>
                  <th>참여 세션</th>
-                 <th>생성 일시</th>
-                 <th className="md:text-right">관리 액션</th>
+                 <th className="md:text-right">생성 일시</th>
               </tr>
             </thead>
             <tbody>
               {projects.map((proj) => (
-                <tr key={proj.id} className="group">
+                <tr 
+                  key={proj.id} 
+                  onClick={() => router.push(`/gendesk/project/history/${proj.id}`)}
+                  className="group cursor-pointer hover:bg-neutral-50 transition-all"
+                >
                   <td>
                     <div className="flex items-center gap-4">
                       <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest bg-neutral-50 px-2 py-0.5 rounded-md border border-neutral-100 shrink-0">
@@ -229,20 +235,8 @@ export default function ProjectsPage() {
                   <td className="text-[11px] font-bold text-neutral-800">
                     {sessionCounts[proj.id] || 0}<span className="text-neutral-400 font-medium ml-1">회</span>
                   </td>
-                  <td className="text-[11px] font-bold text-neutral-400">
+                  <td className="text-[11px] font-bold text-neutral-400 md:text-right">
                     {new Date(proj.created_at).toLocaleDateString('ko-KR')}
-                  </td>
-                   <td className="md:text-right">
-                    <div className="flex items-center md:justify-end gap-6 opacity-100 transition-opacity">
-                      <Link href={`/gendesk/project/history/${proj.id}`} className="text-neutral-300 hover:text-black transition-colors font-bold text-[11px] uppercase tracking-widest flex items-center gap-2" title="View History">
-                        <Activity className="w-4 h-4" />
-                        히스토리
-                      </Link>
-                      <Link href={`/gendesk/project/${proj.id}/settings`} className="text-neutral-300 hover:text-black transition-colors font-bold text-[11px] uppercase tracking-widest flex items-center gap-2" title="Settings">
-                        <Settings className="w-4 h-4" />
-                        설정
-                      </Link>
-                    </div>
                   </td>
                 </tr>
               ))}
@@ -250,6 +244,7 @@ export default function ProjectsPage() {
           </table>
         </div>
       )}
+      </main>
     </div>
   );
 }

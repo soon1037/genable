@@ -6,7 +6,8 @@ import Link from "next/link";
 import { 
   ChevronLeft, Settings, Edit, Link as LinkIcon, 
   Copy, Check, Clock, User, Globe, Activity,
-  CheckCircle2, XCircle, AlertCircle, Loader2, Plus, Info
+  CheckCircle2, XCircle, AlertCircle, Loader2, Plus, Info,
+  ArrowDownRight, MessageSquare
 } from "lucide-react";
 import { getProjectById, getProjectSessionDetails, createOneTimeSession, updateProject } from "@/lib/db";
 
@@ -25,10 +26,22 @@ export default function ProjectHistoryPage() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [copying, setCopying] = useState(null);
+  const [selectedSess, setSelectedSess] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const [drawerMounted, setDrawerMounted] = useState(false);
 
   useEffect(() => {
     if (id) fetchData();
   }, [id]);
+
+  useEffect(() => {
+    if (isDrawerOpen && !isClosing) {
+      setTimeout(() => setDrawerMounted(true), 10);
+    } else {
+      setDrawerMounted(false);
+    }
+  }, [isDrawerOpen, isClosing]);
 
   async function fetchData() {
     setLoading(true);
@@ -55,8 +68,19 @@ export default function ProjectHistoryPage() {
   const renderResultData = (data) => {
     if (!data) return "-";
     if (typeof data === 'object') {
-       // Only if result_data is an object with a 'text' or 'value' key
-       return data.text || data.value || JSON.stringify(data);
+       // Check for common keys
+       const val = data.text || data.value || data.number || data.data || data.result;
+       if (val !== undefined && val !== null) return String(val);
+       
+       // If no common keys, try to find the only key in the object
+       const keys = Object.keys(data);
+       if (keys.length === 1) {
+          const firstVal = data[keys[0]];
+          if (typeof firstVal !== 'object') return String(firstVal);
+       }
+       
+       // Fallback to JSON stringify for complex objects, but keep it clean
+       return JSON.stringify(data);
     }
     return String(data);
   };
@@ -90,6 +114,21 @@ export default function ProjectHistoryPage() {
     }
   };
 
+  const handleRowClick = (sess) => {
+    setSelectedSess(sess);
+    setIsDrawerOpen(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setIsClosing(true);
+    setDrawerMounted(false);
+    setTimeout(() => {
+      setIsDrawerOpen(false);
+      setIsClosing(false);
+      setSelectedSess(null);
+    }, 500); 
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -112,10 +151,10 @@ export default function ProjectHistoryPage() {
   ) || [];
 
   return (
-    <div className="min-h-screen bg-white font-sans text-neutral-900 pb-20">
+    <div className="bg-white font-sans text-neutral-900 pb-20">
       {/* Header */}
-      <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-40 px-8 py-4">
-        <div className="max-w-7xl mx-auto flex items-start justify-between">
+      <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-40 pr-8 pl-0 py-4">
+        <div className="flex items-start justify-between">
           <div className="flex items-center gap-6">
             <button 
               onClick={() => router.push('/gendesk/project')}
@@ -141,7 +180,7 @@ export default function ProjectHistoryPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-8 py-10 space-y-12">
+      <main className="pr-8 pl-0 py-10 space-y-12">
         
         {/* Link Management Section */}
         <section className="space-y-6">
@@ -243,10 +282,15 @@ export default function ProjectHistoryPage() {
                  </thead>
                  <tbody>
                     {sessions.map((sess) => (
-                      <tr key={sess.id} className="group">
+                      <tr 
+                        key={sess.id} 
+                        onClick={() => handleRowClick(sess)}
+                        className="group hover:bg-neutral-50 cursor-pointer transition-all border-b border-neutral-50 last:border-0"
+                      >
                          <td>
-                            <div className={`inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border ${sess.id === sess.guest_id ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-neutral-50 text-neutral-400 border-neutral-100'}`}>
-                               {sess.id === sess.guest_id ? '1회용' : '상시'}
+                            {/* guest_id가 Secure-로 시작하거나 sess.id와 같으면 1회용으로 간주 */}
+                            <div className={`inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border ${(sess.id === sess.guest_id || sess.guest_id?.startsWith('Secure-')) ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-neutral-50 text-neutral-400 border-neutral-100'}`}>
+                               {(sess.id === sess.guest_id || sess.guest_id?.startsWith('Secure-')) ? '1회용' : '상시'}
                             </div>
                          </td>
                          <td className="space-y-0.5">
@@ -259,13 +303,18 @@ export default function ProjectHistoryPage() {
                             <div className="space-y-1">
                                <div className="flex items-center gap-1.5 text-neutral-900 font-bold text-[12px]">
                                   <Clock className="w-3.5 h-3.5 text-neutral-300" />
-                                  {new Date(sess.created_at).toLocaleString('ko-KR', { 
-                                     timeZone: 'Asia/Seoul', 
-                                     month: 'short', 
-                                     day: 'numeric', 
-                                     hour: '2-digit', 
-                                     minute: '2-digit' 
-                                  })}
+                                  {(() => {
+                                     // Ensure we parse the DB timestamp accurately
+                                     const d = new Date(sess.created_at);
+                                     if (isNaN(d.getTime())) return "시간 미확인";
+                                     
+                                     const y = d.getFullYear();
+                                     const m = String(d.getMonth() + 1).padStart(2, '0');
+                                     const date = String(d.getDate()).padStart(2, '0');
+                                     const h = String(d.getHours()).padStart(2, '0');
+                                     const min = String(d.getMinutes()).padStart(2, '0');
+                                     return `${y}.${m}.${date} ${h}:${min}`;
+                                  })()}
                                </div>
                                {sess.ended_at && (
                                  <p className="text-[10px] text-neutral-400 font-medium ml-5">
@@ -274,39 +323,54 @@ export default function ProjectHistoryPage() {
                                )}
                             </div>
                          </td>
-                         <td>
-                            <div className="flex items-center gap-2">
-                               {sess.status === 'pending' ? (
-                                 <>
-                                   <div className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
-                                   <span className="text-[11px] font-bold text-neutral-400">미진행</span>
-                                 </>
-                               ) : sess.status === 'active' ? (
-                                 <>
-                                   <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                                   <span className="text-[11px] font-bold text-blue-500">진행중</span>
-                                 </>
-                               ) : (
-                                 <>
-                                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                   <span className="text-[11px] font-bold text-emerald-500">완료</span>
-                                 </>
-                               )}
-                            </div>
-                         </td>
+                          <td>
+                             <div className="flex items-center gap-2">
+                                {sess.status === 'pending' || (sess.status === 'active' && !sess.ip_address) ? (
+                                  <>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+                                    <span className="text-[11px] font-bold text-orange-500">대기중</span>
+                                  </>
+                                ) : sess.status === 'active' ? (
+                                  <>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                    <span className="text-[11px] font-bold text-blue-500">진행중</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                    <span className="text-[11px] font-bold text-emerald-500">완료</span>
+                                  </>
+                                )}
+                             </div>
+                          </td>
                          
                          {/* Map Mission Results to Columns */}
                          {allMissions.map(m => {
-                           const result = sess.mission_results?.find(r => r.mission_id === m.id);
+                           // Match by ID or Title (Case-insensitive)
+                           // Match by ID, Title (Case-insensitive), or Alias
+                           const result = sess.mission_results?.find(r => 
+                               String(r.mission_id) === String(m.id) || 
+                               r.mission_id?.toLowerCase() === m.title?.toLowerCase() ||
+                               (r.mission_id?.startsWith('mission_') && project.missions?.some((stage, sIdx) => {
+                                  // This is a fallback to try and map mission_1, mission_2 to the actual mission
+                                  // based on the same indexing used in the hook.
+                                  let counter = 1;
+                                  for (const s of project.missions || []) {
+                                     for (const msgObj of s.missions || []) {
+                                        if (`mission_${counter++}` === r.mission_id) return String(msgObj.id) === String(m.id);
+                                     }
+                                  }
+                                  return false;
+                               }))
+                           );
                            return (
                              <td key={m.id}>
                                {result ? (
-                                 <div className="flex items-center gap-2">
-                                   <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${result.status === 'success' ? 'bg-emerald-500' : 'bg-red-400'}`} />
-                                   <span className={`text-[11px] font-bold truncate max-w-[150px] ${m.type === 'verify' ? (result.status === 'success' ? 'text-emerald-600' : 'text-red-500') : 'text-neutral-900'}`}>
-                                      {m.type === 'collect' ? renderResultData(result.result_data) : (result.status === 'success' ? '성공' : '실패')}
-                                   </span>
-                                 </div>
+                               <div className="flex items-center gap-2">
+                                 <span className={`text-[11px] font-bold truncate max-w-[150px] ${m.type === 'verify' ? (result.status === 'success' ? 'text-emerald-600' : 'text-red-500') : 'text-neutral-900'}`}>
+                                    {m.type === 'collect' ? renderResultData(result.result_data) : (result.status === 'success' ? '성공' : '실패')}
+                                 </span>
+                               </div>
                                ) : (
                                  <span className="text-neutral-200 text-[11px] font-bold">-</span>
                                )}
@@ -314,26 +378,179 @@ export default function ProjectHistoryPage() {
                            );
                          })}
 
-                         <td className="md:text-right">
-                            <button className="text-[10px] font-black text-neutral-300 uppercase tracking-widest hover:text-black transition-colors">
-                                내역 보기
-                            </button>
+                          <td className="md:text-right">
+                             <div className="text-[10px] font-black text-neutral-300 uppercase tracking-widest group-hover:text-black transition-colors">
+                                 상세 보기
+                             </div>
+                          </td>
+                       </tr>
+                     ))}
+                     {sessions.length === 0 && (
+                       <tr>
+                         <td colSpan={5 + allMissions.length} className="py-20 text-center text-neutral-300 font-bold text-[12px] italic">
+                            아직 기록된 세션 히스토리가 없습니다.
                          </td>
-                      </tr>
-                    ))}
-                    {sessions.length === 0 && (
-                      <tr>
-                        <td colSpan={5 + allMissions.length} className="py-20 text-center text-neutral-300 font-bold text-[12px] italic">
-                           아직 기록된 세션 히스토리가 없습니다.
-                        </td>
-                      </tr>
-                    )}
-                 </tbody>
-              </table>
-           </div>
-        </section>
+                       </tr>
+                     )}
+                  </tbody>
+               </table>
+            </div>
+         </section>
 
-      </main>
+       </main>
+
+       {/* Detail Drawer */}
+       {isDrawerOpen && selectedSess && (
+         <div className="fixed inset-0 z-[9999] flex justify-end overflow-hidden">
+           {/* Backdrop */}
+           <div 
+             className={`fixed inset-0 bg-black/10 backdrop-blur-[2px] transition-opacity duration-500 ease-in-out ${
+               drawerMounted && !isClosing ? "opacity-100" : "opacity-0"
+             }`}
+             onClick={handleCloseDrawer} 
+           />
+           
+           {/* Drawer Content */}
+           <div className={`
+             relative w-full max-w-xl bg-white border-l border-neutral-100 shadow-2xl z-[10000] h-full transition-transform duration-500 ease-in-out transform flex flex-col
+             ${drawerMounted && !isClosing ? "translate-x-0" : "translate-x-full"}
+           `}>
+             {/* Drawer Header */}
+             <div className="flex items-center justify-between px-8 py-6 border-b border-neutral-100 bg-white sticky top-0 z-10">
+               <div className="flex items-center gap-3">
+                  <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border ${(selectedSess.id === selectedSess.guest_id || selectedSess.guest_id?.startsWith('Secure-')) ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-neutral-50 text-neutral-400 border-neutral-100'}`}>
+                     {(selectedSess.id === selectedSess.guest_id || selectedSess.guest_id?.startsWith('Secure-')) ? '1회용' : '상시'}
+                  </span>
+                  <h3 className="text-lg font-black italic tracking-tighter text-black truncate max-w-[200px]">{selectedSess.id}</h3>
+               </div>
+               <button onClick={handleCloseDrawer} className="p-2 hover:bg-neutral-100 rounded-xl transition-all">
+                 <XCircle className="w-6 h-6 text-neutral-300 hover:text-black" />
+               </button>
+             </div>
+
+             <div className="flex-1 overflow-y-auto p-8 space-y-12">
+               {/* Core Stats */}
+               <div className="grid grid-cols-2 gap-4">
+                  <div className="p-5 bg-neutral-50 rounded-3xl space-y-1.5 border border-neutral-100">
+                     <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+                        <Globe className="w-3 h-3" />
+                        IP Address
+                     </p>
+                     <p className="text-sm font-mono font-bold text-black">{selectedSess.ip_address || "미확인"}</p>
+                  </div>
+                  <div className="p-5 bg-neutral-50 rounded-3xl space-y-1.5 border border-neutral-100">
+                     <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+                        <User className="w-3 h-3" />
+                        Guest ID
+                     </p>
+                     <p className="text-sm font-bold text-black truncate">{selectedSess.guest_id || "미확인"}</p>
+                  </div>
+                  <div className="p-5 bg-neutral-50 rounded-3xl space-y-1.5 border border-neutral-100 col-span-2">
+                     <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+                        <Clock className="w-3 h-3" />
+                        Session Time
+                     </p>
+                     <div className="flex items-center gap-3">
+                        <span className="text-[12px] font-bold text-black">
+                           {(() => {
+                              const d = new Date(selectedSess.created_at);
+                              return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                           })()}
+                        </span>
+                        <ArrowDownRight className="w-3 h-3 text-neutral-200" />
+                        <span className="text-[12px] font-bold text-black">
+                           {selectedSess.ended_at ? (() => {
+                              const d = new Date(selectedSess.ended_at);
+                              return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                           })() : "진행중"}
+                        </span>
+                     </div>
+                  </div>
+               </div>
+
+               {/* Mission Status */}
+               <div className="space-y-6">
+                  <label className="label-premium flex items-center justify-between">
+                     미션 진행 결과
+                     <span className="text-[10px] font-black text-neutral-300 uppercase tracking-widest">{selectedSess.mission_results?.length || 0} / {allMissions.length} 완료</span>
+                  </label>
+                  <div className="space-y-3">
+                     {allMissions.map((m) => {
+                        const res = selectedSess.mission_results?.find(r => 
+                           String(r.mission_id) === String(m.id) || 
+                           r.mission_id?.toLowerCase() === m.title?.toLowerCase()
+                        );
+                        return (
+                           <div key={m.id} className={`flex items-center justify-between p-5 rounded-3xl border transition-all ${res ? 'bg-white border-neutral-100 shadow-sm' : 'bg-neutral-50 border-neutral-50 opacity-40'}`}>
+                              <div className="flex items-center gap-4">
+                                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${res ? 'bg-emerald-50 text-emerald-600' : 'bg-neutral-100 text-neutral-300'}`}>
+                                    {res ? <CheckCircle2 className="w-4 h-4" /> : <Loader2 className="w-4 h-4" />}
+                                 </div>
+                                 <div>
+                                    <h5 className="text-[12px] font-bold text-neutral-900">{m.title}</h5>
+                                    <p className="text-[10px] font-medium text-neutral-400 capitalize">{m.type}</p>
+                                 </div>
+                              </div>
+                              <div className="text-right">
+                                 <div className={`text-[12px] font-black italic tracking-tight ${res?.status === 'success' ? 'text-neutral-900' : 'text-neutral-300'}`}>
+                                    {res ? (m.type === 'collect' ? renderResultData(res.result_data) : 'SUCCESS') : 'PENDING'}
+                                 </div>
+                              </div>
+                           </div>
+                        );
+                     })}
+                  </div>
+               </div>
+
+               {/* Transcript */}
+               <div className="space-y-6">
+                  <label className="label-premium flex items-center justify-between">
+                     대화 트랜스크립트
+                     <div className="p-1 px-3 bg-neutral-900 rounded-lg text-[9px] font-black text-white uppercase tracking-widest">Live Log</div>
+                  </label>
+                  <div className="bg-neutral-50 rounded-[2.5rem] p-8 space-y-8 border border-neutral-100 min-h-[300px]">
+                     {selectedSess.transcript && selectedSess.transcript.length > 0 ? selectedSess.transcript.map((msg, idx) => {
+                        // Standardize role and text since data formats have evolved
+                        const role = msg.role || (msg.user !== undefined && msg.user !== "" ? 'user' : 'assistant');
+                        const text = msg.text || (role === 'user' ? msg.user : msg.assistant);
+                        
+                        // If both are empty, skip empty bubble
+                        if (!text) return null;
+
+                        return (
+                          <div key={idx} className={`flex flex-col ${role === 'user' ? 'items-end' : 'items-start'}`}>
+                             <div className={`max-w-[85%] px-5 py-4 rounded-2xl text-[13px] font-medium leading-relaxed ${role === 'user' ? 'bg-black text-white rounded-tr-none shadow-xl shadow-black/5' : 'bg-white text-neutral-900 border border-neutral-100 rounded-tl-none shadow-sm'}`}>
+                                {text}
+                             </div>
+                             <span className="text-[9px] font-black text-neutral-300 uppercase tracking-widest mt-2 px-1">
+                                {role === 'user' ? 'Guest Participant' : 'Genable AI Assistant'}
+                             </span>
+                          </div>
+                        );
+                      }) : (
+                        <div className="h-full flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-30">
+                           <Info className="w-10 h-10" strokeWidth={1.5} />
+                           <p className="text-[12px] font-bold">기록된 대화 내역이 없습니다.</p>
+                        </div>
+                     )}
+                  </div>
+               </div>
+             </div>
+
+             <div className="p-8 border-t border-neutral-100 bg-neutral-50/50">
+               <div className="flex items-center justify-between">
+                  <div>
+                     <p className="text-[10px] font-black text-neutral-300 uppercase tracking-widest mb-1">Session Data Verified</p>
+                     <p className="text-[11px] font-bold text-neutral-400 italic">Genable Data Shield &copy; 2026</p>
+                  </div>
+                  <button onClick={handleCloseDrawer} className="btn-primary py-3 px-8 text-xs font-bold shadow-xl shadow-black/10">
+                     닫기
+                  </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
     </div>
   );
 }

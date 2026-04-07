@@ -66,22 +66,24 @@ export default function DesignProjects() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Page Header */}
-      <div className="flex items-center justify-between mb-8 pb-6 border-b border-neutral-100">
-        <div>
-          <h3 className="text-2xl font-bold tracking-tight text-neutral-900">카드뉴스</h3>
+    <div className="bg-white font-sans text-neutral-900 pb-20">
+      <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-40 pr-8 pl-0 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-black italic tracking-tighter text-neutral-900">카드뉴스</h1>
+          </div>
+          <button 
+            onClick={handleCreateNew}
+            className="btn-primary flex items-center gap-2 px-6 py-2.5 shadow-xl shadow-black/10"
+          >
+            <PlusCircle className="w-4 h-4" />
+            새 프로젝트 생성
+          </button>
         </div>
-        <button 
-          onClick={handleCreateNew}
-          className="btn-primary flex items-center gap-2 px-6 py-2.5 shadow-xl shadow-black/10"
-        >
-          <PlusCircle className="w-4 h-4" />
-          새 프로젝트 생성
-        </button>
-      </div>
+      </header>
 
-      {projects.length === 0 ? (
+      <main className="pr-8 pl-0 py-10 space-y-12">
+        {projects.length === 0 ? (
         <div className="bg-white border border-neutral-200 rounded-2xl p-24 text-center shadow-sm">
            <div className="w-20 h-20 bg-neutral-50 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border border-neutral-100 text-neutral-200">
               <LayersIcon className="w-10 h-10" />
@@ -164,7 +166,8 @@ export default function DesignProjects() {
             </tbody>
           </table>
         </div>
-      )}
+        )}
+      </main>
     </div>
   );
 }
