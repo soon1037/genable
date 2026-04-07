@@ -1,6 +1,4 @@
-"use client";
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { 
@@ -18,15 +16,14 @@ import {
   Monitor
 } from "lucide-react";
 
-export default function OAuthConsentPage() {
+function ConsentContent() {
   const searchParams = useSearchParams();
   const [isMounted, setIsMounted] = useState(false);
   
   // Simulated app data from params
   const clientName = searchParams.get("client_name") || "Genable Live Desktop";
   const scopes = searchParams.get("scope")?.split(",") || ["profile.read", "project.write", "usage.view"];
-  const redirectUri = searchParams.get("redirect_uri") || "#";
-
+  
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -157,5 +154,17 @@ export default function OAuthConsentPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OAuthConsentPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-neutral-100 border-t-black rounded-full animate-spin"></div>
+      </div>
+    }>
+      <ConsentContent />
+    </Suspense>
   );
 }
