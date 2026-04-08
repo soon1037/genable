@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, Suspense, useRef } from "react";
-import { MonitorUp, Mic, Camera, Square, Loader2, Info, ArrowRight, Activity, Terminal, Target, CheckCircle2, Settings2, Globe } from "lucide-react";
+import { MonitorUp, Mic, Camera, Square, Loader2, Info, ArrowRight, Activity, Terminal, Target, CheckCircle2, Settings2, Globe, MessageSquare, Send } from "lucide-react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { getProjectById, findSession, createSession, addSessionLog, getSessionLogs, updateSession } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
@@ -21,6 +21,7 @@ function SessionContent() {
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
   const [isEnded, setIsEnded] = useState(false);
+  const [textInput, setTextInput] = useState("");
   
   const [permissions, setPermissions] = useState({
     audio: false,
@@ -40,7 +41,7 @@ function SessionContent() {
   }, []);
 
   const { 
-    status, isSpeaking, logs, setLogs, startSession, stopSession, 
+    status, isSpeaking, logs, setLogs, startSession, stopSession, sendTextMessage, 
     transcript, conversation, currentStageIndex, completedMissions 
   } = useGeminiLiveHook("aidesk-video");
 
@@ -378,24 +379,31 @@ function SessionContent() {
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-            <div className={`flex items-center justify-between p-6 rounded-3xl border transition-all ${permissions.audio ? "bg-emerald-50/30 border-emerald-100" : "bg-neutral-50 border-neutral-100"}`}>
-               <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${permissions.audio ? "bg-emerald-500 text-white" : "bg-white text-neutral-400 shadow-sm"}`}>
-                     <Mic className="w-5 h-5" strokeWidth={permissions.audio ? 2.5 : 1.5} />
-                  </div>
-                  <div>
-                    <h4 className="text-[13px] font-bold text-neutral-900 flex items-center gap-2">
-                       실시간 보이스 {req.audio && <span className="text-[9px] bg-black text-white px-1.5 py-0.5 rounded uppercase tracking-widest leading-none">필수</span>}
-                    </h4>
-                    <p className="text-[11px] text-neutral-400 font-medium">원활한 음성 소통이 가능합니다.</p>
-                  </div>
-               </div>
-               {!permissions.audio ? (
-                 <button onClick={() => requestPermission('audio')} className="px-4 py-2 bg-white border border-neutral-200 text-xs font-bold rounded-xl hover:bg-neutral-50 transition-all">허용하기</button>
-               ) : (
-                 <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-               )}
-            </div>
+            {req.audio ? (
+              <div className={`flex items-center justify-between p-6 rounded-3xl border transition-all ${permissions.audio ? "bg-emerald-50/30 border-emerald-100" : "bg-neutral-50 border-neutral-100"}`}>
+                <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${permissions.audio ? "bg-emerald-500 text-white" : "bg-white text-neutral-400 shadow-sm"}`}>
+                      <Mic className="w-5 h-5" strokeWidth={permissions.audio ? 2.5 : 1.5} />
+                    </div>
+                    <div>
+                      <h4 className="text-[13px] font-bold text-neutral-900 flex items-center gap-2">
+                        실시간 보이스 <span className="text-[9px] bg-black text-white px-1.5 py-0.5 rounded uppercase tracking-widest leading-none">필수</span>
+                      </h4>
+                      <p className="text-[11px] text-neutral-400 font-medium">원활한 음성 소통이 가능합니다.</p>
+                    </div>
+                </div>
+                {!permissions.audio ? (
+                  <button onClick={() => requestPermission('audio')} className="px-4 py-2 bg-white border border-neutral-200 text-xs font-bold rounded-xl hover:bg-neutral-50 transition-all">허용하기</button>
+                ) : (
+                  <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                )}
+              </div>
+            ) : (
+              <div className="p-6 rounded-3xl border border-dashed border-neutral-200 bg-neutral-50/50 flex flex-col items-center justify-center gap-2 text-center">
+                <Mic className="w-5 h-5 text-neutral-300" />
+                <p className="text-[11px] font-bold text-neutral-400">이 세션은 마이크 전원을 사용하지 않습니다.</p>
+              </div>
+            )}
 
             {req.camera && (
               <div className={`flex items-center justify-between p-6 rounded-3xl border transition-all ${permissions.camera ? "bg-emerald-50/30 border-emerald-100" : "bg-neutral-50 border-neutral-100"}`}>
@@ -436,6 +444,22 @@ function SessionContent() {
                 ) : (
                   <CheckCircle2 className="w-6 h-6 text-emerald-500" />
                 )}
+              </div>
+            )}
+            {req.text && (
+              <div className={`flex items-center justify-between p-6 rounded-3xl border transition-all bg-emerald-50/30 border-emerald-100`}>
+                <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-500 text-white`}>
+                      <MessageSquare className="w-5 h-5" strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <h4 className="text-[13px] font-bold text-neutral-900 flex items-center gap-2">
+                        텍스트 채팅 가이드 <span className="text-[9px] bg-black text-white px-1.5 py-0.5 rounded uppercase tracking-widest leading-none">활성</span>
+                      </h4>
+                      <p className="text-[11px] text-neutral-400 font-medium">음성 대화와 실시간 채팅을 병행할 수 있습니다.</p>
+                    </div>
+                </div>
+                <CheckCircle2 className="w-6 h-6 text-emerald-500" />
               </div>
             )}
           </div>
@@ -544,8 +568,41 @@ function SessionContent() {
            </div>
         </div>
 
-        {/* End Session Button - Fixed to Bottom */}
-        <div className="fixed bottom-0 left-0 right-0 flex justify-center pb-16 z-50 pointer-events-none">
+        {/* Chat & Controls Section - Fixed to Bottom */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 p-8 flex flex-col items-center gap-8 pointer-events-none">
+           {/* Floating Chat Input Area */}
+           {project?.media_requirements?.text && status === 'active' && (
+              <div className="w-full max-w-lg pointer-events-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="relative flex items-center bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-1.5 shadow-2xl">
+                    <input 
+                      type="text"
+                      value={textInput}
+                      onChange={(e) => setTextInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && textInput.trim()) {
+                          sendTextMessage(textInput);
+                          setTextInput("");
+                        }
+                      }}
+                      placeholder="보이스 대화 중에도 채팅이 가능합니다..."
+                      className="flex-1 bg-transparent border-none px-6 py-4 text-[14px] font-medium text-white placeholder:text-white/20 focus:outline-none"
+                    />
+                    <button 
+                      disabled={!textInput.trim()}
+                      onClick={() => {
+                        if (textInput.trim()) {
+                          sendTextMessage(textInput);
+                          setTextInput("");
+                        }
+                      }}
+                      className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center disabled:bg-white/5 disabled:text-white/10 transition-all active:scale-90"
+                    >
+                      <Send className="w-5 h-5" strokeWidth={2.5} />
+                    </button>
+                </div>
+              </div>
+           )}
+
            <button 
              onClick={(e) => {
                e.stopPropagation();
@@ -747,6 +804,39 @@ function SessionContent() {
                     )}
                  </div>
               </div>
+
+              {/* Chat Input Section */}
+              {project?.media_requirements?.text && status === 'active' && (
+                <div className="p-4 bg-white border-t border-neutral-100 flex items-center gap-3 animate-in slide-in-from-bottom-2 shrink-0">
+                  <div className="flex-1 relative flex items-center">
+                      <input 
+                        type="text"
+                        value={textInput}
+                        onChange={(e) => setTextInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && textInput.trim()) {
+                            sendTextMessage(textInput);
+                            setTextInput("");
+                          }
+                        }}
+                        placeholder="메시지를 입력하세요..."
+                        className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-3.5 text-[13px] font-medium text-neutral-900 focus:outline-none focus:border-black focus:bg-white transition-all"
+                      />
+                      <button 
+                        disabled={!textInput.trim()}
+                        onClick={() => {
+                          if (textInput.trim()) {
+                            sendTextMessage(textInput);
+                            setTextInput("");
+                          }
+                        }}
+                        className="absolute right-2 w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center disabled:bg-neutral-100 disabled:text-neutral-300 transition-all active:scale-90"
+                      >
+                        <Send className="w-4 h-4" strokeWidth={2.5} />
+                      </button>
+                  </div>
+                </div>
+              )}
            </div>
            <div className="h-44 bg-neutral-900 rounded-[2.5rem] p-6 flex flex-col overflow-hidden shadow-2xl">
               <div className="flex items-center justify-between mb-3 text-[10px] font-bold text-neutral-600 uppercase tracking-widest px-1">

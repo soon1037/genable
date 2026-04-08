@@ -79,7 +79,7 @@ export default function CompanyHomePage() {
       <main className="pr-8 pl-0 py-10 space-y-12">
         
         {/* 2. 자산 및 비즈니스 현황 (Real-time DB 기반) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
           {/* 가용 자산 카드 */}
           <div className="card-premium h-full flex flex-col justify-between">
@@ -94,22 +94,6 @@ export default function CompanyHomePage() {
                   {Number(dashboardData?.genBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 1 })} <span className="text-sm not-italic opacity-30">GEN</span>
                </p>
                <p className="text-xs text-neutral-400 font-medium tracking-tight">AI 연산 가용 잔액</p>
-            </div>
-          </div>
-
-          {/* 누적 서비스 지출 (Customer Perspective) */}
-          <div className="card-premium h-full border-black bg-neutral-900 flex flex-col justify-between group">
-            <div className="flex items-center justify-between mb-4">
-               <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center border border-white/10 text-white">
-                  <TrendingUp className="w-5 h-5" />
-               </div>
-               <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">누적 서비스 지출</span>
-            </div>
-            <div>
-               <p className="text-3xl font-black italic tracking-tighter text-white mb-1">
-                  ₩{Number(dashboardData?.totalRevenue || 0).toLocaleString()}
-               </p>
-               <p className="text-xs text-neutral-500 font-medium tracking-tight">현재까지의 총 서비스 이용 금액</p>
             </div>
           </div>
 
@@ -178,7 +162,7 @@ export default function CompanyHomePage() {
                           <th className="w-24">유형</th>
                           <th>프로젝트 정보</th>
                           <th>운영 상세</th>
-                          <th className="text-right">지출액 (KRW)</th>
+                          <th className="text-right">지출 Gen</th>
                           <th className="text-right">일시</th>
                        </tr>
                     </thead>
@@ -201,7 +185,7 @@ export default function CompanyHomePage() {
                                   {isLive ? '실시간 상담 세션 종료' : 'AI 디자인 생성 완료'}
                                </td>
                                <td className="text-right font-black text-neutral-900 tracking-tighter">
-                                  -₩{Number(log.cost_krw || 0).toLocaleString()}
+                                  -{Number(log.gen_consumed || 0).toLocaleString()} GEN
                                 </td>
                                <td className="text-right text-neutral-400 font-medium text-[11px] whitespace-nowrap">
                                   {new Date(log.created_at).toLocaleString('ko-KR', { 

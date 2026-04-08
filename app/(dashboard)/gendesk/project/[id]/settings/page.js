@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
-  ChevronLeft, CheckCircle2, Headphones, Camera, Monitor,
+  ChevronLeft, CheckCircle2, Headphones, Camera, Monitor, MessageSquare,
   Plus, Trash2, HelpCircle, Rocket, GraduationCap, Users, TestTube,
   PlayCircle, Loader2, Volume2, ChevronDown, Settings2, Target,
   Sparkles, ArrowRight, X, ArrowUpRight, ChevronRight, Globe,
@@ -36,7 +36,7 @@ function EditProjectContent() {
     voice_id: "Puck",
     voice_guide: "차분하고 친절하면서도 전문적인 톤을 유지해주세요.",
     stages: [],
-    media: { audio: true, camera: false, screen: false },
+    media: { audio: true, camera: false, screen: false, text: false },
     url_type: "one-time",
     duration: 600,
     is_unlimited: true,
@@ -85,7 +85,7 @@ function EditProjectContent() {
                   config: m.config || { label: m.title || "" }
                 }))
               }] : []),
-            media: proj.media_requirements || { audio: true, camera: false, screen: false },
+            media: proj.media_requirements || { audio: true, camera: false, screen: false, text: false },
             url_type: proj.settings?.url_type || "one-time",
             duration: proj.settings?.duration || 600,
             is_unlimited: proj.settings?.duration === null,
@@ -109,10 +109,22 @@ function EditProjectContent() {
   };
 
   const toggleMedia = (type) => {
-    setFormData(prev => ({
-      ...prev,
-      media: { ...prev.media, [type]: !prev.media[type] }
-    }));
+    setFormData(prev => {
+      const currentMedia = prev.media;
+      const willBeActive = !currentMedia[type];
+      
+      // 최소 하나는 켜져 있어야 함
+      const activeCount = Object.values(currentMedia).filter(v => v).length;
+      if (!willBeActive && activeCount <= 1) {
+        alert("최소 하나의 서비스 수단(오디오, 텍스트 등)은 활성화되어야 합니다.");
+        return prev;
+      }
+
+      return {
+        ...prev,
+        media: { ...currentMedia, [type]: willBeActive }
+      };
+    });
   };
 
   const addStage = () => {
@@ -273,150 +285,66 @@ ${s.missions.map(m => `  * [${m.type === 'collect' ? '데이터 수집' : '정�
   }
 
   return (
-    <div className="animate-in fade-in duration-1000 pb-24 w-full px-8">
-      {/* 헤더 섹션 */}
-      <div className="flex items-center justify-between mb-0 pt-0 h-16">
-        <div className="flex items-center gap-3">
-          <div className="relative group shrink-0">
-            <select
-              value={formData.type}
-              onChange={(e) => updateFormData("type", e.target.value)}
-              className="appearance-none bg-neutral-50 hover:bg-neutral-100 border border-neutral-100 rounded-lg pl-3 pr-8 py-1.5 text-[11px] font-bold text-neutral-500 hover:text-black transition-all outline-none cursor-pointer"
+    <div className="bg-white font-sans text-neutral-900 pb-24 px-8">
+      <header className="border-b border-neutral-100 bg-white/80 backdrop-blur-md sticky top-0 z-50 pr-8 pl-0 py-4 mb-4 -mx-8 px-8">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => router.push('/gendesk/project')}
+              className="p-2 hover:bg-neutral-50 rounded-xl transition-all text-neutral-400 hover:text-black"
             >
-              {[
-                { id: 'support', name: '고객지원' },
-                { id: 'onboarding', name: '온보딩' },
-                { id: 'education', name: '교육' },
-                { id: 'interview', name: '면접' },
-                { id: 'test', name: '테스트' },
-              ].map((type) => (
-                <option key={type.id} value={type.id}>{type.name}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-neutral-400 pointer-events-none group-hover:text-black transition-all" />
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <div className="relative">
+                    <select
+                      value={formData.type}
+                      onChange={(e) => updateFormData("type", e.target.value)}
+                      className="appearance-none bg-neutral-50 border border-neutral-100 px-2.5 py-1 rounded text-[10px] font-black text-neutral-400 uppercase tracking-widest outline-none cursor-pointer hover:border-neutral-200 transition-all"
+                    >
+                      {[
+                        { id: 'support', name: '고객지원' },
+                        { id: 'onboarding', name: '온보딩' },
+                        { id: 'education', name: '교육' },
+                        { id: 'interview', name: '면접' },
+                        { id: 'test', name: '테스트' },
+                      ].map((type) => (
+                        <option key={type.id} value={type.id}>{type.name}</option>
+                      ))}
+                    </select>
+                </div>
+                <div className="inline-grid items-center min-w-[32px]">
+                  <span className="invisible px-0 col-start-1 row-start-1 whitespace-pre text-xl font-black italic tracking-tighter">
+                    {formData.name || "Untitled"}
+                  </span>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => updateFormData("name", e.target.value)}
+                    placeholder="프로젝트 제목 입력"
+                    className="col-start-1 row-start-1 w-full text-xl font-black italic tracking-tighter text-neutral-900 bg-transparent border-none outline-none focus:ring-0 placeholder:text-neutral-200 transition-all"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="inline-grid items-center min-w-[32px]">
-            <span className="invisible px-1 col-start-1 row-start-1 whitespace-pre text-2xl font-bold border-none">
-              {formData.name || "프로젝트 제목 입력"}
-            </span>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => updateFormData("name", e.target.value)}
-              placeholder="프로젝트 제목 입력"
-              className="col-start-1 row-start-1 w-full text-2xl font-bold text-neutral-900 bg-transparent border-none outline-none focus:ring-0 placeholder:text-neutral-200 transition-all font-bold"
-            />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleUpdate}
+              disabled={saving}
+              className="btn-primary flex items-center gap-2 py-2.5 px-8 shadow-xl shadow-black/5"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              설정 저장 및 배포
+            </button>
           </div>
         </div>
-
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.back()}
-            className="text-sm font-bold text-neutral-400 hover:text-black transition-colors"
-          >
-            취소
-          </button>
-          <button
-            onClick={handleUpdate}
-            disabled={saving}
-            className="btn-primary px-8 py-3 text-xs"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            설정 저장 및 배포
-          </button>
-        </div>
-      </div>
+      </header>
 
       <div className="space-y-8">
-        {/* 접속 설정 바 */}
-        <div className="pt-8 pb-8 border-b border-neutral-100 transition-all">
-          <div className="flex flex-wrap items-center gap-x-12 gap-y-6">
-            <div className="flex items-center gap-4">
-              <label className="label-premium !mb-0 shrink-0">접속 링크 타입</label>
-              <div className="flex p-0.5 bg-neutral-50 rounded-lg border border-neutral-100 w-44">
-                <button
-                  onClick={() => updateFormData("url_type", "one-time")}
-                  className={`flex-1 py-1.5 text-[9px] font-bold rounded-md transition-all ${formData.url_type === 'one-time' ? "bg-white text-black shadow-sm" : "text-neutral-400 hover:text-neutral-500"}`}
-                >
-                  1회용
-                </button>
-                <button
-                  onClick={() => updateFormData("url_type", "permanent")}
-                  className={`flex-1 py-1.5 text-[9px] font-bold rounded-md transition-all ${formData.url_type === 'permanent' ? "bg-white text-black shadow-sm" : "text-neutral-400 hover:text-neutral-500"}`}
-                >
-                  상시
-                </button>
-              </div>
-            </div>
 
-            <div className="w-px h-4 bg-neutral-100" />
-
-            <div className="flex items-center gap-4">
-              <label className="label-premium !mb-0 shrink-0">사용 권한</label>
-              <div className="flex gap-1">
-                {[
-                  { id: 'audio', icon: Headphones, label: '오디오' },
-                  { id: 'camera', icon: Camera, label: '카메라' },
-                  { id: 'screen', icon: Monitor, label: '화면공유' },
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => toggleMedia(item.id)}
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all border ${formData.media[item.id] ? "bg-white border-neutral-200 text-black shadow-sm" : "bg-neutral-50 border-neutral-100 text-neutral-300 hover:text-neutral-400"
-                      }`}
-                    title={item.label}
-                  >
-                    <item.icon className="w-3.5 h-3.5" />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="w-px h-4 bg-neutral-100" />
-
-            <div className="flex items-center gap-4">
-              <label className="label-premium !mb-0 shrink-0">자동 종료 타이머</label>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => updateFormData("is_unlimited", !formData.is_unlimited)}
-                  className={`w-6 h-3 rounded-full relative transition-all ${!formData.is_unlimited ? "bg-black" : "bg-neutral-200"}`}
-                >
-                  <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all ${!formData.is_unlimited ? "left-3.5" : "left-0.5"}`} />
-                </button>
-                {!formData.is_unlimited ? (
-                  <div className="flex items-center gap-1.5 bg-neutral-50 px-3 py-1.5 rounded-lg border border-neutral-100">
-                    <input
-                      type="number"
-                      value={formData.duration}
-                      onChange={(e) => updateFormData("duration", e.target.value)}
-                      className="bg-transparent text-xs font-bold text-neutral-900 outline-none w-10 text-center"
-                    />
-                    <span className="text-[9px] font-bold text-neutral-300">초</span>
-                  </div>
-                ) : (
-                  <span className="text-[10px] font-bold text-neutral-400 px-1 py-1.5">제한없음</span>
-                )}
-              </div>
-            </div>
-            <div className="w-px h-4 bg-neutral-100" />
-
-            <div className="flex items-center gap-4">
-              <label className="label-premium !mb-0 shrink-0">상시 URL 노출</label>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => updateFormData("is_permanent_enabled", !formData.is_permanent_enabled)}
-                  className={`w-6 h-3 rounded-full relative transition-all ${formData.is_permanent_enabled ? "bg-emerald-500" : "bg-neutral-200"}`}
-                >
-                  <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all ${formData.is_permanent_enabled ? "left-3.5" : "left-0.5"}`} />
-                </button>
-                <span className={`text-[10px] font-bold px-1 py-1.5 ${formData.is_permanent_enabled ? "text-emerald-600" : "text-neutral-400"}`}>
-                  {formData.is_permanent_enabled ? "활성" : "비활성"}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* 탭 내비게이션 */}
         <div className="flex items-center gap-8 border-b border-neutral-100 pb-0 mb-8">
@@ -439,8 +367,33 @@ ${s.missions.map(m => `  * [${m.type === 'collect' ? '데이터 수집' : '정�
         </div>
 
         {activeTab === 'basic' && (
-          <div className="grid grid-cols-12 gap-16 items-start animate-in fade-in slide-in-from-left-2 duration-500">
-            {/* 시나리오 리스트 */}
+          <div className="animate-in fade-in slide-in-from-left-2 duration-500 space-y-12">
+            {/* 사용 권한 섹션 */}
+            <div className="space-y-4">
+              <label className="text-[11px] font-bold text-black uppercase tracking-wider block px-1">서비스 사용 권한</label>
+              <div className="flex gap-2 bg-white border border-neutral-100 p-4 rounded-3xl shadow-sm w-fit">
+                {[
+                  { id: 'audio', icon: Headphones, label: '오디오' },
+                  { id: 'camera', icon: Camera, label: '카메라' },
+                  { id: 'screen', icon: Monitor, label: '화면공유' },
+                  { id: 'text', icon: MessageSquare, label: '텍스트 채팅' },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => toggleMedia(item.id)}
+                    className={`px-6 py-4 rounded-2xl flex items-center gap-3 transition-all border ${formData.media[item.id] ? "bg-black border-black text-white shadow-xl" : "bg-neutral-50 border-neutral-100 text-neutral-300 hover:text-neutral-400"
+                      }`}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    <span className="text-xs font-bold">{item.label}</span>
+                    {formData.media[item.id] && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-12 gap-16 items-start">
+               {/* 시나리오 리스트 */}
             <div className="col-span-12 lg:col-span-8 space-y-8">
               <div className="space-y-8">
                 {formData.type === 'support' && (
@@ -579,6 +532,7 @@ ${s.missions.map(m => `  * [${m.type === 'collect' ? '데이터 수집' : '정�
                   placeholder="AI가 어떤 말투와 성격으로 대화해야 하는지 알려주세요..."
                   className="w-full p-6 bg-white border border-neutral-200 rounded-2xl focus:border-black outline-none transition-all text-xs font-bold leading-relaxed min-h-[220px] shadow-sm resize-none"
                 />
+              </div>
               </div>
             </div>
           </div>
